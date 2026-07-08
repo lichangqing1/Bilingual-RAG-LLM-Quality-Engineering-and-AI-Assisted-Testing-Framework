@@ -1,0 +1,33 @@
+question,expected_answer,expected_source,expected_keywords,question_type
+What is the return period?,Customers can return most products within 30 days of delivery.,return_policy.md,30 days;return;delivery,normal
+What condition must returned items be in?,"Returned items must be unused, undamaged, and in their original packaging.",return_policy.md,unused;undamaged;original packaging,normal
+How long does it usually take to process a refund after a return is received?,Refunds are usually processed within 5 to 10 business days after the returned item is received and inspected.,return_policy.md,5 to 10 business days;refund;received,normal
+Can customized products be returned?,Customized products cannot be returned.,return_policy.md,customized products;cannot be returned,normal
+What should a customer do if a product arrives damaged?,Customers should contact customer support within 7 days of delivery and provide photos of the damaged item.,return_policy.md,7 days;customer support;photos,normal
+Can gift cards be returned?,Gift cards cannot be returned.,return_policy.md,gift cards;cannot be returned,normal
+How long does standard shipping usually take?,Standard shipping usually takes 3 to 5 business days.,shipping_policy.md,3 to 5 business days;standard shipping,normal
+How long does express shipping usually take?,Express shipping usually takes 1 to 2 business days.,shipping_policy.md,1 to 2 business days;express shipping,normal
+Which orders qualify for free standard shipping?,Orders above $50 qualify for free standard shipping.,shipping_policy.md,$50;free standard shipping,normal
+Why might shipping be delayed?,"Shipping may be delayed during public holidays, extreme weather conditions, or high order volume.",shipping_policy.md,public holidays;extreme weather;high order volume,normal
+How can customers track their order?,Customers can track their order using the tracking link sent by email after shipment.,shipping_policy.md,tracking link;email;shipped,normal
+What should a customer do if an order has not arrived after the estimated delivery date?,The customer should contact customer support for assistance.,shipping_policy.md,estimated delivery date;customer support;assistance,normal
+How long is the limited warranty for most electronic products?,Most electronic products include a one-year limited warranty from the date of purchase.,warranty_policy.md,one-year;limited warranty;date of purchase,normal
+What does the warranty cover?,The warranty covers manufacturing defects.,warranty_policy.md,manufacturing defects;warranty,normal
+Does the warranty cover accidental damage?,The warranty does not cover accidental damage.,warranty_policy.md,does not cover;accidental damage,normal
+What must customers provide for warranty service?,Customers must provide proof of purchase.,warranty_policy.md,proof of purchase;warranty service,normal
+How long are warranty claims usually reviewed?,Warranty claims are usually reviewed within 7 business days.,warranty_policy.md,7 business days;warranty claims,normal
+What can the company do if a warranty claim is approved?,"The company may repair the product, replace it, or provide store credit.",warranty_policy.md,repair;replace;store credit,normal
+What payment methods does the company accept?,"The company accepts credit cards, debit cards, PayPal, and selected digital wallets.",payment_policy.md,credit cards;debit cards;PayPal;digital wallets,normal
+When is payment charged?,Payment is charged when the order is placed.,payment_policy.md,charged;order is placed,normal
+What happens if payment fails?,The order will not be processed until a valid payment method is provided.,payment_policy.md,payment fails;not be processed;valid payment method,normal
+Where are refunds issued?,Refunds are issued to the original payment method.,payment_policy.md,refunds;original payment method,normal
+Does the company store full card numbers?,The company does not store full card numbers on its servers.,payment_policy.md,does not store;full card numbers,normal
+How can customers create an account?,Customers can create an account using an email address and password.,account_support.md,email address;password;create an account,normal
+How can a customer reset a forgotten password?,Customers can reset it using the password reset link on the login page.,account_support.md,password reset link;login page,normal
+What account details can customers update?,"Customers can update their email address, shipping address, and phone number.",account_support.md,email address;shipping address;phone number,normal
+Can customer support see a customer's password?,Customer support cannot see or share a customer's password.,account_support.md,cannot see;password,normal
+How can customers request account deletion?,Customers can request account deletion by contacting customer support.,account_support.md,account deletion;customer support,normal
+How long can account deletion take?,Account deletion may take up to 14 business days.,account_support.md,14 business days;account deletion,normal
+Can I return a product after 90 days?,The documents do not provide support for returning products after 90 days.,none,not provide;90 days;cannot confirm,unanswerable
+Does the company provide international shipping?,The provided documents do not mention international shipping.,none,not mention;international shipping,unanswerable
+Can I pay with cryptocurrency?,The provided documents do not mention cryptocurrency as an accepted payment method.,none,not mention;cryptocurrency;payment method,unanswerable
