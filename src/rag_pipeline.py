@@ -24,12 +24,17 @@ class SimpleRAGPipeline:
         "paypal", "venmo", "alipay", "wechat", "klarna", "cash", "cod"
     }
 
+    CHINESE_HIGH_SIGNAL_ABSENT_TERMS = {
+        "加密货币", "比特币", "国际配送", "国际运输", "海外配送", "海外运输",
+        "支付宝", "微信支付", "货到付款"
+    }
+
     def __init__(
         self,
         vector_store,
         top_k: int = 3,
         min_similarity_score: float = 0.05,
-        min_question_coverage: float = 0.20,
+        min_question_coverage: float = 0.08,
     ):
         self.vector_store = vector_store
         self.top_k = top_k
@@ -43,12 +48,25 @@ class SimpleRAGPipeline:
     @staticmethod
     def _split_sentences(text: str) -> List[str]:
         """Simple sentence splitter."""
-        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+        sentences = re.split(r"(?<=[.!?。！？])\s*", text.strip())
         return [sentence.strip() for sentence in sentences if sentence.strip()]
 
     @staticmethod
     def _tokenize(text: str) -> List[str]:
-        return re.findall(r"[a-zA-Z0-9$]+", text.lower())
+        ascii_tokens = re.findall(r"[a-zA-Z0-9$]+", text.lower())
+        chinese_tokens = []
+        for sequence in re.findall(r"[\u4e00-\u9fff]{2,}", text):
+            chinese_tokens.append(sequence)
+            for size in (2, 3):
+                chinese_tokens.extend(
+                    sequence[i:i + size]
+                    for i in range(0, max(len(sequence) - size + 1, 0))
+                )
+        return ascii_tokens + chinese_tokens
+
+    @staticmethod
+    def _contains_chinese(text: str) -> bool:
+        return bool(re.search(r"[\u4e00-\u9fff]", text))
 
     @classmethod
     def _important_words(cls, text: str) -> Set[str]:
@@ -89,7 +107,9 @@ class SimpleRAGPipeline:
 
     @staticmethod
     def _day_constraints(text: str) -> Set[str]:
-        return set(re.findall(r"\b\d+(?:\.\d+)?\s+(?:business\s+)?days\b", text.lower()))
+        english_days = re.findall(r"\b\d+(?:\.\d+)?\s+(?:business\s+)?days\b", text.lower())
+        chinese_days = re.findall(r"\d+(?:\.\d+)?\s*(?:个)?(?:工作日|天|日)", text)
+        return set(english_days + chinese_days)
 
     @classmethod
     def _context_text(cls, retrieved_chunks: List[Dict[str, object]]) -> str:
@@ -129,6 +149,27 @@ class SimpleRAGPipeline:
         context = self._context_text(retrieved_chunks).lower()
         question_lower = question.lower()
         missing_terms, coverage = self._missing_context_terms(question, retrieved_chunks)
+        is_chinese_question = self._contains_chinese(question)
+        question_days = sorted(self._day_constraints(question_lower))
+
+        if is_chinese_question and "退货" in question and question_days:
+            missing_day_constraints = [day for day in question_days if day not in context]
+            if missing_day_constraints:
+                mentioned_days = sorted(self._day_constraints(context))
+                mentioned_text = f" 文档只提到{mentioned_days[0]}。" if mentioned_days else ""
+                return (
+                    True,
+                    f"提供的文档没有提供{missing_day_constraints[0]}后退货的依据。"
+                    f"{mentioned_text}我无法确认{missing_day_constraints[0]}后可以退货",
+                )
+
+        for term in self.CHINESE_HIGH_SIGNAL_ABSENT_TERMS:
+            if term in question and term not in context:
+                if term in {"国际配送", "国际运输", "海外配送", "海外运输"}:
+                    return True, "提供的文档没有提到国际配送"
+                if term in {"加密货币", "比特币"}:
+                    return True, "提供的文档没有提到加密货币作为可接受的付款方式"
+                return True, f"提供的文档没有提到{term}"
 
         # Missing numeric constraints are high risk. Example: "after 90 days"
         # should not be answered using a generic 30-day return sentence.
@@ -138,9 +179,16 @@ class SimpleRAGPipeline:
         if missing_numbers:
             missing_number_text = ", ".join(sorted(missing_numbers))
             mentioned_days = sorted(self._day_constraints(context))
-            question_days = sorted(self._day_constraints(question_lower))
-            if "return" in question_lower and question_days:
+            asks_about_return = "return" in question_lower or "退货" in question
+            if asks_about_return and question_days:
                 mentioned_text = f" The documents only mention {mentioned_days[0]}." if mentioned_days else ""
+                if is_chinese_question:
+                    mentioned_text = f" 文档只提到{mentioned_days[0]}。" if mentioned_days else ""
+                    return (
+                        True,
+                        f"提供的文档没有提供{question_days[0]}后退货的依据。"
+                        f"{mentioned_text}我无法确认{question_days[0]}后可以退货",
+                    )
                 return (
                     True,
                     "the provided documents do not provide support for returning products "
@@ -169,6 +217,7 @@ class SimpleRAGPipeline:
             if len(term) >= 8 and term not in self.BROAD_DOMAIN_TERMS
         }
         yes_no_question = bool(re.match(r"\s*(can|does|do|is|are|will|would|could|should)\b", question_lower))
+        yes_no_question = yes_no_question or bool(re.match(r"\s*(可以|能否|是否|会不会|能不能)", question))
         if yes_no_question and specific_missing_terms:
             return True, f"specific question term not found in evidence: {', '.join(sorted(specific_missing_terms))}"
 

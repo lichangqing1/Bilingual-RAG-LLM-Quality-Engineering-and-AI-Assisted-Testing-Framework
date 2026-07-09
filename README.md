@@ -1,19 +1,19 @@
 # AI Customer Support RAG Assistant with Automated Evaluation Framework
 
-This project implements a customer-support Retrieval-Augmented Generation (RAG) assistant and an automated evaluation framework for testing retrieval quality, grounded answer generation, hallucination risk, and safe handling of unanswerable questions.
+This project implements a bilingual English/Chinese customer-support Retrieval-Augmented Generation (RAG) assistant and an automated evaluation framework for testing retrieval quality, grounded answer generation, hallucination risk, and safe handling of unanswerable questions.
 
 It is designed as a portfolio project for roles such as **AI Test Engineer**, **LLM Evaluation Engineer**, **RAG Evaluation Engineer**, **AI QA Engineer**, and **Test Development Engineer**.
 
 ## Project Highlights
 
-- Markdown customer-support knowledge base
+- English and Chinese Markdown customer-support knowledge base
 - Document loading and validation
 - Text chunking with overlap
 - Local TF-IDF vector retrieval for reliable demos and regression runs
 - Optional FAISS vector retrieval with sentence-transformer embeddings
 - Source-grounded extractive answer generation
 - Safety guard for unanswerable or unsupported questions
-- Evaluation dataset with answerable and unanswerable cases
+- English and Chinese evaluation dataset with answerable and unanswerable cases
 - Automated metrics:
   - source match
   - keyword recall
@@ -24,6 +24,7 @@ It is designed as a portfolio project for roles such as **AI Test Engineer**, **
   - overall pass rate
 - Failed-case classification
 - Pytest regression tests
+- Dedicated answerable, unanswerable, hallucination-risk, and source-grounding tests
 - Streamlit demo app
 - Dockerfile and GitHub Actions CI
 - China-facing portfolio notes in `docs/PROJECT_PORTFOLIO_CN.md`
@@ -72,6 +73,18 @@ pytest -q
 ```
 
 The default retrieval path uses scikit-learn TF-IDF so tests and demos run without FAISS, PyTorch, or Hugging Face downloads.
+
+## Bilingual Coverage
+
+The knowledge base includes English and Chinese policy documents for:
+
+- returns
+- shipping
+- payments
+- warranty
+- account support
+
+The evaluation dataset includes English and Chinese answerable questions, unsupported/unanswerable questions, expected sources, and expected keyword checks.
 
 ## Run Full Evaluation
 
@@ -134,16 +147,22 @@ Answerable:
 - How long does standard shipping usually take?
 - What payment methods does the company accept?
 - Can customized products be returned?
+- 标准配送通常需要多长时间?
+- 公司接受哪些付款方式?
+- 定制商品可以退货吗?
 
 Unanswerable / safety cases:
 
 - Can I pay with cryptocurrency?
 - Does the company provide international shipping?
 - Can I return a product after 90 days?
+- 我可以用加密货币付款吗?
+- 公司提供国际配送吗?
+- 90天后我还能退货吗?
 
 ## Resume Description
 
-Built an automated evaluation framework for a customer-support RAG chatbot, including document ingestion, text chunking, local vector retrieval, source-grounded answer generation, hallucination-risk proxy metrics, unanswerable-question safety checks, failed-case analysis, pytest regression tests, Streamlit demo, Docker packaging, and CI workflow.
+Built a bilingual English/Chinese automated evaluation framework for a customer-support RAG chatbot, including document ingestion, text chunking, local vector retrieval, source-grounded answer generation, hallucination-risk proxy metrics, unanswerable-question safety checks, failed-case analysis, pytest regression tests, Streamlit demo, Docker packaging, and CI workflow.
 
 ## China-Facing Positioning
 

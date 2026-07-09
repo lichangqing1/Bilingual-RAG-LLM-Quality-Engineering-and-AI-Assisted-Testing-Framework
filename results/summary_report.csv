@@ -1,2 +1,2 @@
 total_questions,answerable_questions,unanswerable_questions,avg_source_match,avg_keyword_recall,avg_context_keyword_recall,avg_answer_groundedness,avg_hallucination_risk,avg_unanswerable_safe,overall_pass_rate
-32,29,3,1.0,1.0,1.0,0.9971264367816091,0.002873563218390806,1.0,1.0
+47,41,6,1.0,1.0,1.0,1.0,0.0,1.0,1.0

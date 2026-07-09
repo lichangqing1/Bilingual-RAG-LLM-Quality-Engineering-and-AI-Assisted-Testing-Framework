@@ -31,3 +31,18 @@ How long can account deletion take?,Account deletion may take up to 14 business 
 Can I return a product after 90 days?,The documents do not provide support for returning products after 90 days.,none,not provide;90 days;cannot confirm,unanswerable
 Does the company provide international shipping?,The provided documents do not mention international shipping.,none,not mention;international shipping,unanswerable
 Can I pay with cryptocurrency?,The provided documents do not mention cryptocurrency as an accepted payment method.,none,not mention;cryptocurrency;payment method,unanswerable
+标准配送通常需要多长时间?,标准配送通常需要3到5个工作日。,shipping_policy_zh.md,标准配送;3到5个工作日,normal
+加急配送通常需要多长时间?,加急配送通常需要1到2个工作日。,shipping_policy_zh.md,加急配送;1到2个工作日,normal
+哪些订单可以享受免费标准配送?,金额超过50美元的订单可享受免费标准配送。,shipping_policy_zh.md,50美元;免费标准配送,normal
+配送为什么可能会延迟?,公共假期、极端天气或订单量较高时，配送可能会延迟。,shipping_policy_zh.md,公共假期;极端天气;订单量较高,normal
+大多数商品可以在多久内退货?,大多数商品可以在送达后30天内退货。,return_policy_zh.md,30天;退货;送达,normal
+退回商品必须满足什么条件?,退回的商品必须未使用、未损坏，并保留原包装。,return_policy_zh.md,未使用;未损坏;原包装,normal
+定制商品可以退货吗?,定制商品不能退货。,return_policy_zh.md,定制商品;不能退货,normal
+公司接受哪些付款方式?,公司接受信用卡、借记卡、PayPal和部分数字钱包。,payment_policy_zh.md,信用卡;借记卡;PayPal;数字钱包,normal
+退款会退到哪里?,退款会退回到原始付款方式。,payment_policy_zh.md,退款;原始付款方式,normal
+客服可以查看客户密码吗?,客服不能查看或分享客户密码。,account_support_zh.md,不能查看;密码,normal
+客户如何重置忘记的密码?,客户可以使用登录页面上的密码重置链接进行重置。,account_support_zh.md,密码重置链接;登录页面,normal
+保修涵盖什么?,保修涵盖制造缺陷。,warranty_policy_zh.md,制造缺陷;保修,normal
+90天后我还能退货吗?,文档没有提供90天后退货的依据。,none,没有提供;90天;无法确认,unanswerable
+公司提供国际配送吗?,提供的文档没有提到国际配送。,none,没有提到;国际配送,unanswerable
+我可以用加密货币付款吗?,提供的文档没有提到加密货币作为可接受的付款方式。,none,没有提到;加密货币;付款方式,unanswerable

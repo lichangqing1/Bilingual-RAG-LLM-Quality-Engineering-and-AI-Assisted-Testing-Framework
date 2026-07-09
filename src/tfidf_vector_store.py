@@ -13,7 +13,11 @@ class TfidfVectorStore:
     """
 
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
+        self.vectorizer = TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(2, 5),
+            lowercase=True,
+        )
         self.chunks = None
         self.matrix = None
 

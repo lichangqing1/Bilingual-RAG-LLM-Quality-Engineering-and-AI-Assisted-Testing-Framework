@@ -12,7 +12,7 @@ def normalize_text(text: object) -> str:
     if pd.isna(text):
         return ""
     text = str(text).lower()
-    text = re.sub(r"source:\s*[^.]+\.?", "", text)
+    text = re.sub(r"source:\s*.*$", "", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
@@ -90,9 +90,22 @@ def answer_has_source_citation(answer: object) -> int:
     return int("source:" in str(answer).lower())
 
 
+def _evaluation_terms(text: object) -> set[str]:
+    text_norm = normalize_text(text)
+    terms = set(re.findall(r"[a-zA-Z0-9$]+", text_norm))
+    for sequence in re.findall(r"[\u4e00-\u9fff]{2,}", str(text)):
+        terms.add(sequence)
+        for size in (2, 3):
+            terms.update(
+                sequence[i:i + size]
+                for i in range(0, max(len(sequence) - size + 1, 0))
+            )
+    return terms
+
+
 def _sentence_overlap_ratio(sentence: str, context: str) -> float:
-    sentence_terms = set(re.findall(r"[a-zA-Z0-9$]+", normalize_text(sentence)))
-    context_terms = set(re.findall(r"[a-zA-Z0-9$]+", normalize_text(context)))
+    sentence_terms = _evaluation_terms(sentence)
+    context_terms = _evaluation_terms(context)
     if not sentence_terms:
         return 1.0
     return len(sentence_terms.intersection(context_terms)) / len(sentence_terms)
@@ -117,7 +130,8 @@ def answer_groundedness(answer: object, retrieved_context: object, question_type
     if answer_norm in context_norm:
         return 1.0
 
-    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", str(answer)) if s.strip()]
+    answer_without_source = re.sub(r"source:\s*.*$", "", str(answer), flags=re.IGNORECASE)
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?。！？])\s*", answer_without_source) if s.strip()]
     claim_sentences = [s for s in sentences if not s.lower().startswith("source:")]
     if not claim_sentences:
         return 0.0
