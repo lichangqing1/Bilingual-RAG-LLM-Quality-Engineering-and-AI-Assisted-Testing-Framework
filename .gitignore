@@ -13,6 +13,7 @@ venv/
 # Local artifacts
 *.log
 .env
+logs/*.jsonl
 
 # Large/generated local indexes
 vector_store/

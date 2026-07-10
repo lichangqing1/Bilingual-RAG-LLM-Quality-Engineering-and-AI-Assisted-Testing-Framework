@@ -112,7 +112,7 @@ class SimpleRAGPipeline:
         return set(english_days + chinese_days)
 
     @classmethod
-    def _context_text(cls, retrieved_chunks: List[Dict[str, object]]) -> str:
+    def      _context_text(cls, retrieved_chunks: List[Dict[str, object]]) -> str:
         return "\n".join(str(chunk.get("text", "")) for chunk in retrieved_chunks)
 
     @classmethod
@@ -169,6 +169,8 @@ class SimpleRAGPipeline:
                     return True, "提供的文档没有提到国际配送"
                 if term in {"加密货币", "比特币"}:
                     return True, "提供的文档没有提到加密货币作为可接受的付款方式"
+                if term in {"支付宝", "微信支付"}:
+                    return True, f"提供的文档没有提到{term}作为可接受的付款方式"
                 return True, f"提供的文档没有提到{term}"
 
         # Missing numeric constraints are high risk. Example: "after 90 days"

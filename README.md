@@ -23,9 +23,13 @@ It is designed as a portfolio project for roles such as **AI Test Engineer**, **
   - unanswerable-question safety
   - overall pass rate
 - Failed-case classification
+- Chinese failed-case analysis with metric details and remediation suggestions
+- OpenCompass-style dataset/inferencer/evaluator/report framing
 - Pytest regression tests
 - Dedicated answerable, unanswerable, hallucination-risk, and source-grounding tests
 - Streamlit demo app
+- FastAPI `/ask` endpoint with JSONL request logging
+- Evaluation run logs for auditability
 - Dockerfile and GitHub Actions CI
 - China-facing portfolio notes in `docs/PROJECT_PORTFOLIO_CN.md`
 
@@ -86,6 +90,17 @@ The knowledge base includes English and Chinese policy documents for:
 
 The evaluation dataset includes English and Chinese answerable questions, unsupported/unanswerable questions, expected sources, and expected keyword checks.
 
+## OpenCompass-Style Evaluation Framing
+
+This project borrows the evaluation structure used by benchmark frameworks such as OpenCompass:
+
+- **Dataset**: bilingual English/Chinese evaluation questions with expected sources, keywords, and answerability labels.
+- **Inferencer**: a RAG pipeline that retrieves top-k context chunks and generates extractive answers.
+- **Evaluator**: rule-based checks for retrieval quality, answer keyword recall, context recall, source grounding, hallucination risk, and unanswerable safety.
+- **Reporter**: CSV, Markdown, failed-case analysis, and JSONL evaluation logs.
+
+The goal is not leaderboard ranking. The goal is RAG regression testing: every code or knowledge-base change can be checked against answerability, grounding, and safety gates.
+
 ## Run Full Evaluation
 
 ```bash
@@ -99,7 +114,11 @@ results/evaluation_results.csv
 results/failed_cases.csv
 results/summary_report.csv
 results/evaluation_report.md
+logs/evaluation_runs.jsonl
+logs/evaluation_failed_cases.jsonl
 ```
+
+`failed_cases.csv` includes failure type, failure detail, language, and recommendation fields. When there are Chinese failures, the Markdown report includes a dedicated Chinese failed-case analysis section.
 
 ## Run Regression Gates
 
@@ -113,6 +132,32 @@ This checks whether key evaluation metrics stay above minimum thresholds. It is 
 
 ```bash
 streamlit run app.py
+```
+
+## Run FastAPI Service
+
+```bash
+uvicorn api:app --reload --port 8000
+```
+
+Health check:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Ask a bilingual RAG question:
+
+```bash
+curl -X POST http://127.0.0.1:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "标准配送通常需要多长时间?", "top_k": 3}'
+```
+
+API requests are logged to:
+
+```text
+logs/api_requests.jsonl
 ```
 
 ## Run with Docker

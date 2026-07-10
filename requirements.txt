@@ -4,3 +4,5 @@ scikit-learn
 pytest
 streamlit
 matplotlib
+fastapi
+uvicorn

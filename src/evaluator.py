@@ -7,6 +7,13 @@ from typing import Dict, Iterable, List, Optional
 import pandas as pd
 
 
+def detect_language(text: object) -> str:
+    """Return zh if text contains Chinese characters, otherwise en."""
+    if pd.isna(text):
+        return "unknown"
+    return "zh" if re.search(r"[\u4e00-\u9fff]", str(text)) else "en"
+
+
 def normalize_text(text: object) -> str:
     """Normalize text for rule-based evaluation."""
     if pd.isna(text):
@@ -80,7 +87,8 @@ def answerability_check(answer: object, question_type: object) -> Optional[int]:
         "could not find", "do not provide", "does not provide",
         "do not mention", "does not mention", "not mention",
         "not provided", "cannot confirm", "not enough information",
-        "answer this safely", "insufficient information"
+        "answer this safely", "insufficient information",
+        "没有提到", "没有提供", "无法确认", "信息不足", "不能确认"
     ]
     return int(any(phrase in answer_norm for phrase in safe_phrases))
 
@@ -170,6 +178,7 @@ def evaluate_single_case(result: Dict[str, object], expected_row: pd.Series) -> 
     is_unanswerable = str(question_type).lower().strip() == "unanswerable"
     return {
         "question": expected_row.get("question", result.get("question", "")),
+        "language": detect_language(expected_row.get("question", result.get("question", ""))),
         "question_type": question_type,
         "answer": answer,
         "expected_answer": expected_row.get("expected_answer", ""),
@@ -271,12 +280,49 @@ def classify_failure_type(row: pd.Series) -> str:
     return "Passed"
 
 
+def failure_detail(row: pd.Series) -> str:
+    """Return metric-level details for failed cases."""
+    details = []
+    checks = [
+        ("source_pass", "source_match", "expected source was not retrieved"),
+        ("keyword_pass", "keyword_recall", "answer missed expected keywords"),
+        ("context_pass", "context_keyword_recall", "retrieved context missed expected keywords"),
+        ("groundedness_pass", "answer_groundedness", "answer was not grounded enough"),
+        ("unanswerable_pass", "unanswerable_safe", "unanswerable question was not safely refused"),
+    ]
+    for pass_col, metric_col, message in checks:
+        value = row.get(pass_col)
+        if not pd.isna(value) and int(value) == 0:
+            metric_value = row.get(metric_col, "")
+            details.append(f"{message} ({metric_col}={metric_value})")
+    return "; ".join(details) if details else "No failed metric detail available"
+
+
+def failure_recommendation(row: pd.Series) -> str:
+    """Suggest a concrete next step for a failed evaluation case."""
+    failure_type = classify_failure_type(row)
+    language = row.get("language", "en")
+    if "Retrieval failure" in failure_type:
+        return "Improve chunking, retrieval query normalization, or add missing bilingual KB coverage."
+    if "Answer failure" in failure_type:
+        return "Improve answer sentence selection or align expected keyword variants with the policy wording."
+    if "Grounding failure" in failure_type:
+        return "Prefer extractive evidence sentences and avoid unsupported generated claims."
+    if "Safety failure" in failure_type:
+        if language == "zh":
+            return "Add Chinese unsupported-term rules or numeric-constraint refusal patterns."
+        return "Add unsupported-term rules or numeric-constraint refusal patterns."
+    return "Inspect retrieved context, answer text, and expected labels."
+
+
 def identify_failed_cases(evaluation_results: pd.DataFrame) -> pd.DataFrame:
     """Return failed cases with failure type labels."""
     df = evaluation_results.copy()
     if "overall_pass" not in df.columns:
         df = add_pass_fail_flags(df)
     df["failure_type"] = df.apply(classify_failure_type, axis=1)
+    df["failure_detail"] = df.apply(failure_detail, axis=1)
+    df["recommendation"] = df.apply(failure_recommendation, axis=1)
     return df[df["overall_pass"] == 0].copy()
 
 
