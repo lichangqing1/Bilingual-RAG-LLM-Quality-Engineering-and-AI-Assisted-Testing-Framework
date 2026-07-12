@@ -1,25 +1,56 @@
+import math
+import re
+from collections import Counter
 from typing import Dict, List
 
+import numpy as np
+from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-class TfidfVectorStore:
+class HybridVectorStore:
     """
-    Lightweight vector store for local demos and regression evaluation.
+    Lightweight hybrid retriever for local demos and regression evaluation.
+
+    It combines:
+    - BM25 lexical retrieval for exact policy-term matching.
+    - Dense latent-semantic retrieval from local TF-IDF + SVD embeddings.
 
     This avoids native FAISS/PyTorch dependencies while preserving the same
     search interface used by SimpleRAGPipeline.
     """
 
-    def __init__(self):
+    def __init__(self, bm25_weight: float = 0.55, embedding_weight: float = 0.45, svd_components: int = 64):
+        self.bm25_weight = bm25_weight
+        self.embedding_weight = embedding_weight
+        self.svd_components = svd_components
         self.vectorizer = TfidfVectorizer(
             analyzer="char_wb",
             ngram_range=(2, 5),
             lowercase=True,
         )
         self.chunks = None
-        self.matrix = None
+        self.tfidf_matrix = None
+        self.embedding_matrix = None
+        self.svd = None
+        self.bm25_documents = None
+        self.bm25_doc_lengths = None
+        self.bm25_idf = None
+        self.bm25_avg_doc_length = 0.0
+
+    @staticmethod
+    def _tokenize(text: str) -> List[str]:
+        ascii_tokens = re.findall(r"[a-zA-Z0-9$]+", text.lower())
+        chinese_tokens = []
+        for sequence in re.findall(r"[\u4e00-\u9fff]{2,}", text):
+            chinese_tokens.append(sequence)
+            for size in (2, 3):
+                chinese_tokens.extend(
+                    sequence[i:i + size]
+                    for i in range(0, max(len(sequence) - size + 1, 0))
+                )
+        return ascii_tokens + chinese_tokens
 
     def build_index(self, chunks: List[Dict[str, str]]) -> None:
         if not chunks:
@@ -27,24 +58,108 @@ class TfidfVectorStore:
 
         self.chunks = chunks
         texts = [chunk["text"] for chunk in chunks]
-        self.matrix = self.vectorizer.fit_transform(texts)
+        self.tfidf_matrix = self.vectorizer.fit_transform(texts)
+        self._build_embedding_index()
+        self._build_bm25_index(texts)
+
+    def _build_embedding_index(self) -> None:
+        n_docs, n_features = self.tfidf_matrix.shape
+        if min(n_docs, n_features) <= 2:
+            self.svd = None
+            self.embedding_matrix = self.tfidf_matrix
+            return
+
+        n_components = min(self.svd_components, n_docs - 1, n_features - 1)
+        self.svd = TruncatedSVD(n_components=n_components, random_state=42)
+        self.embedding_matrix = self.svd.fit_transform(self.tfidf_matrix)
+
+    def _build_bm25_index(self, texts: List[str]) -> None:
+        tokenized_documents = [self._tokenize(text) for text in texts]
+        self.bm25_documents = [Counter(tokens) for tokens in tokenized_documents]
+        self.bm25_doc_lengths = [len(tokens) for tokens in tokenized_documents]
+        self.bm25_avg_doc_length = (
+            sum(self.bm25_doc_lengths) / len(self.bm25_doc_lengths)
+            if self.bm25_doc_lengths
+            else 0.0
+        )
+
+        document_frequencies = Counter()
+        for tokens in tokenized_documents:
+            document_frequencies.update(set(tokens))
+
+        total_docs = len(tokenized_documents)
+        self.bm25_idf = {
+            term: math.log(1 + (total_docs - freq + 0.5) / (freq + 0.5))
+            for term, freq in document_frequencies.items()
+        }
+
+    def _bm25_scores(self, query: str) -> np.ndarray:
+        query_terms = self._tokenize(query)
+        scores = np.zeros(len(self.chunks), dtype=float)
+        if not query_terms or not self.bm25_documents:
+            return scores
+
+        k1 = 1.5
+        b = 0.75
+        avgdl = self.bm25_avg_doc_length or 1.0
+        for idx, doc_terms in enumerate(self.bm25_documents):
+            doc_len = self.bm25_doc_lengths[idx] or 1
+            score = 0.0
+            for term in query_terms:
+                term_freq = doc_terms.get(term, 0)
+                if term_freq == 0:
+                    continue
+                idf = self.bm25_idf.get(term, 0.0)
+                denominator = term_freq + k1 * (1 - b + b * doc_len / avgdl)
+                score += idf * (term_freq * (k1 + 1)) / denominator
+            scores[idx] = score
+        return scores
+
+    @staticmethod
+    def _normalize_scores(scores: np.ndarray) -> np.ndarray:
+        if scores.size == 0:
+            return scores
+        min_score = float(scores.min())
+        max_score = float(scores.max())
+        if max_score == min_score:
+            return np.zeros_like(scores, dtype=float)
+        return (scores - min_score) / (max_score - min_score)
+
+    def _embedding_scores(self, query: str) -> np.ndarray:
+        query_tfidf = self.vectorizer.transform([query])
+        if self.svd is not None:
+            query_embedding = self.svd.transform(query_tfidf)
+        else:
+            query_embedding = query_tfidf
+        return cosine_similarity(query_embedding, self.embedding_matrix)[0]
 
     def search(self, query: str, top_k: int = 3) -> List[Dict[str, object]]:
-        if self.matrix is None or self.chunks is None:
+        if self.tfidf_matrix is None or self.chunks is None:
             raise ValueError("Index has not been built yet.")
 
         if not query.strip():
             raise ValueError("Query cannot be empty.")
 
         top_k = min(top_k, len(self.chunks))
-        query_vector = self.vectorizer.transform([query])
-        scores = cosine_similarity(query_vector, self.matrix)[0]
-        ranked_indices = scores.argsort()[::-1][:top_k]
+        bm25_scores = self._bm25_scores(query)
+        embedding_scores = self._embedding_scores(query)
+        hybrid_scores = (
+            self.bm25_weight * self._normalize_scores(bm25_scores)
+            + self.embedding_weight * self._normalize_scores(embedding_scores)
+        )
+        ranked_indices = hybrid_scores.argsort()[::-1][:top_k]
 
         results = []
         for idx in ranked_indices:
             chunk = self.chunks[int(idx)].copy()
-            chunk["similarity_score"] = float(scores[int(idx)])
+            chunk["bm25_score"] = float(bm25_scores[int(idx)])
+            chunk["embedding_score"] = float(embedding_scores[int(idx)])
+            chunk["similarity_score"] = float(hybrid_scores[int(idx)])
+            chunk["retrieval_method"] = "hybrid_bm25_embeddings"
             results.append(chunk)
 
         return results
+
+
+class TfidfVectorStore(HybridVectorStore):
+    """Backward-compatible alias for the default hybrid vector store."""

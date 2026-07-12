@@ -22,7 +22,8 @@ def generate_markdown_report(summary_df: pd.DataFrame, failed_cases_df: pd.DataF
     )
     lines.append("- **Dataset**: bilingual English/Chinese policy questions with expected sources and keywords.")
     lines.append("- **Inferencer**: the RAG pipeline retrieves top-k chunks and generates extractive answers.")
-    lines.append("- **Evaluator**: rule-based metrics score source match, keyword recall, context recall, groundedness, hallucination risk, and unanswerable safety.")
+    lines.append("- **Retriever**: hybrid BM25 + local dense embeddings rank bilingual context chunks.")
+    lines.append("- **Evaluator**: rule-based and RAGAS-style metrics score source match, keyword recall, context recall, groundedness, hallucination risk, faithfulness, answer relevancy, and unanswerable safety.")
     lines.append("- **Reporter**: CSV and Markdown outputs summarize aggregate metrics and failed-case diagnostics.")
     lines.append(
         "Unlike a leaderboard benchmark, this framework is optimized for RAG QA regression: "

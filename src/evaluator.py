@@ -167,6 +167,54 @@ def hallucination_risk(answer: object, retrieved_context: object, question_type:
     return 1 - groundedness
 
 
+def ragas_context_precision(retrieved_sources: Iterable[str], expected_source: object) -> Optional[float]:
+    """
+    RAGAS-style context precision proxy.
+
+    It measures whether the expected source appears early in the retrieved
+    source list. A match at rank 1 scores 1.0; lower-rank matches score lower.
+    """
+    if pd.isna(expected_source) or str(expected_source).strip().lower() == "none":
+        return None
+    sources = [str(src).strip() for src in retrieved_sources]
+    expected = str(expected_source).strip()
+    for rank, source in enumerate(sources, start=1):
+        if source == expected:
+            return 1.0 / rank
+    return 0.0
+
+
+def ragas_context_recall(retrieved_context: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
+    """
+    RAGAS-style context recall proxy.
+
+    It checks how much expected answer evidence is present in retrieved context.
+    For unanswerable cases, context recall is skipped because the correct
+    behavior is absence-aware refusal rather than finding unsupported terms.
+    """
+    if str(question_type).lower().strip() == "unanswerable":
+        return None
+    return context_keyword_recall(retrieved_context, expected_keywords)
+
+
+def ragas_faithfulness(answer: object, retrieved_context: object, question_type: object = "normal") -> Optional[float]:
+    """RAGAS-style faithfulness proxy based on answer groundedness."""
+    return answer_groundedness(answer, retrieved_context, question_type)
+
+
+def ragas_answer_relevancy(answer: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
+    """
+    RAGAS-style answer relevancy proxy.
+
+    For answerable questions, keyword recall is used as a deterministic proxy
+    for whether the answer addresses the expected information need. For
+    unanswerable questions, safe refusal quality is handled by unanswerable_safe.
+    """
+    if str(question_type).lower().strip() == "unanswerable":
+        return None
+    return keyword_recall(answer, expected_keywords)
+
+
 def evaluate_single_case(result: Dict[str, object], expected_row: pd.Series) -> Dict[str, object]:
     """Evaluate one RAG result against one expected evaluation row."""
     answer = result.get("answer", "")
@@ -176,6 +224,10 @@ def evaluate_single_case(result: Dict[str, object], expected_row: pd.Series) -> 
     expected_source = expected_row.get("expected_source", None)
     question_type = expected_row.get("question_type", "normal")
     is_unanswerable = str(question_type).lower().strip() == "unanswerable"
+    ragas_precision = ragas_context_precision(retrieved_sources, expected_source)
+    ragas_recall = ragas_context_recall(retrieved_context, expected_keywords, question_type)
+    ragas_faith = ragas_faithfulness(answer, retrieved_context, question_type)
+    ragas_relevancy = ragas_answer_relevancy(answer, expected_keywords, question_type)
     return {
         "question": expected_row.get("question", result.get("question", "")),
         "language": detect_language(expected_row.get("question", result.get("question", ""))),
@@ -189,6 +241,10 @@ def evaluate_single_case(result: Dict[str, object], expected_row: pd.Series) -> 
         "context_keyword_recall": None if is_unanswerable else context_keyword_recall(retrieved_context, expected_keywords),
         "answer_groundedness": answer_groundedness(answer, retrieved_context, question_type),
         "hallucination_risk": hallucination_risk(answer, retrieved_context, question_type),
+        "ragas_context_precision": ragas_precision,
+        "ragas_context_recall": ragas_recall,
+        "ragas_faithfulness": ragas_faith,
+        "ragas_answer_relevancy": ragas_relevancy,
         "source_citation": answer_has_source_citation(answer),
         "matched_keywords": ";".join(matched_keywords(answer, expected_keywords)),
         "missing_keywords": ";".join(missing_keywords(answer, expected_keywords)),
@@ -214,6 +270,7 @@ def add_pass_fail_flags(
     keyword_recall_threshold: float = 0.5,
     context_recall_threshold: float = 0.5,
     groundedness_threshold: float = 0.8,
+    ragas_threshold: float = 0.5,
 ) -> pd.DataFrame:
     """Add pass/fail flags for retrieval, answer quality, grounding, and safety."""
     df = evaluation_results.copy()
@@ -227,11 +284,32 @@ def add_pass_fail_flags(
         df["groundedness_pass"] = df["answer_groundedness"].apply(lambda v: None if pd.isna(v) else int(v >= groundedness_threshold))
     else:
         df["groundedness_pass"] = None
+    for metric in [
+        "ragas_context_precision",
+        "ragas_context_recall",
+        "ragas_faithfulness",
+        "ragas_answer_relevancy",
+    ]:
+        pass_col = f"{metric}_pass"
+        if metric in df.columns:
+            df[pass_col] = df[metric].apply(lambda v: None if pd.isna(v) else int(v >= ragas_threshold))
+        else:
+            df[pass_col] = None
     df["unanswerable_pass"] = df["unanswerable_safe"].apply(lambda v: None if pd.isna(v) else int(v == 1))
 
     def overall(row):
         checks = []
-        for col in ["source_pass", "keyword_pass", "context_pass", "groundedness_pass", "unanswerable_pass"]:
+        for col in [
+            "source_pass",
+            "keyword_pass",
+            "context_pass",
+            "groundedness_pass",
+            "ragas_context_precision_pass",
+            "ragas_context_recall_pass",
+            "ragas_faithfulness_pass",
+            "ragas_answer_relevancy_pass",
+            "unanswerable_pass",
+        ]:
             val = row[col]
             if not pd.isna(val):
                 checks.append(int(val))
@@ -257,6 +335,10 @@ def summarize_results(evaluation_results: pd.DataFrame) -> pd.DataFrame:
         "avg_context_keyword_recall": df.get("context_keyword_recall", pd.Series(dtype=float)).mean(skipna=True),
         "avg_answer_groundedness": df.get("answer_groundedness", pd.Series(dtype=float)).mean(skipna=True),
         "avg_hallucination_risk": df.get("hallucination_risk", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_ragas_context_precision": df.get("ragas_context_precision", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_ragas_context_recall": df.get("ragas_context_recall", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_ragas_faithfulness": df.get("ragas_faithfulness", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_ragas_answer_relevancy": df.get("ragas_answer_relevancy", pd.Series(dtype=float)).mean(skipna=True),
         "avg_unanswerable_safe": df["unanswerable_safe"].mean(skipna=True),
         "overall_pass_rate": df["overall_pass"].mean(skipna=True),
     }
@@ -288,6 +370,10 @@ def failure_detail(row: pd.Series) -> str:
         ("keyword_pass", "keyword_recall", "answer missed expected keywords"),
         ("context_pass", "context_keyword_recall", "retrieved context missed expected keywords"),
         ("groundedness_pass", "answer_groundedness", "answer was not grounded enough"),
+        ("ragas_context_precision_pass", "ragas_context_precision", "RAGAS-style context precision was too low"),
+        ("ragas_context_recall_pass", "ragas_context_recall", "RAGAS-style context recall was too low"),
+        ("ragas_faithfulness_pass", "ragas_faithfulness", "RAGAS-style faithfulness was too low"),
+        ("ragas_answer_relevancy_pass", "ragas_answer_relevancy", "RAGAS-style answer relevancy was too low"),
         ("unanswerable_pass", "unanswerable_safe", "unanswerable question was not safely refused"),
     ]
     for pass_col, metric_col, message in checks:

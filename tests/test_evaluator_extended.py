@@ -8,6 +8,10 @@ from src.evaluator import (
     identify_failed_cases,
     hallucination_risk,
     evaluate_single_case,
+    ragas_answer_relevancy,
+    ragas_context_precision,
+    ragas_context_recall,
+    ragas_faithfulness,
 )
 
 
@@ -68,3 +72,13 @@ def test_failed_case_analysis_includes_detail_and_recommendation():
     assert "failure_detail" in failed.columns
     assert "recommendation" in failed.columns
     assert "unanswerable question was not safely refused" in failed.iloc[0]["failure_detail"]
+
+
+def test_ragas_style_metrics():
+    context = "标准配送通常需要3到5个工作日。"
+    answer = "标准配送通常需要3到5个工作日。 Source: shipping_policy_zh.md."
+
+    assert ragas_context_precision(["shipping_policy_zh.md", "payment_policy_zh.md"], "shipping_policy_zh.md") == 1.0
+    assert ragas_context_recall(context, "标准配送;3到5个工作日") == 1.0
+    assert ragas_faithfulness(answer, context) == 1.0
+    assert ragas_answer_relevancy(answer, "标准配送;3到5个工作日") == 1.0

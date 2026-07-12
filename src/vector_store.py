@@ -43,7 +43,7 @@ class FaissVectorStore:
         self.embeddings = embeddings
 
         dimension = embeddings.shape[1]
-        self.index = faiss.IndexFlatIP(dimension)
+        self.index = faiss.IndexFlatIP(dimension) # Inner Product
         self.index.add(embeddings)
 
     def search(self, query: str, top_k: int = 3) -> List[Dict[str, object]]:

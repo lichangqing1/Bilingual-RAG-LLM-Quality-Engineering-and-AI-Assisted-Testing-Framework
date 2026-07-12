@@ -112,7 +112,7 @@ class SimpleRAGPipeline:
         return set(english_days + chinese_days)
 
     @classmethod
-    def      _context_text(cls, retrieved_chunks: List[Dict[str, object]]) -> str:
+    def _context_text(cls, retrieved_chunks: List[Dict[str, object]]) -> str:
         return "\n".join(str(chunk.get("text", "")) for chunk in retrieved_chunks)
 
     @classmethod

@@ -9,7 +9,7 @@ It is designed as a portfolio project for roles such as **AI Test Engineer**, **
 - English and Chinese Markdown customer-support knowledge base
 - Document loading and validation
 - Text chunking with overlap
-- Local TF-IDF vector retrieval for reliable demos and regression runs
+- Hybrid retrieval with BM25 + local dense embeddings for reliable demos and regression runs
 - Optional FAISS vector retrieval with sentence-transformer embeddings
 - Source-grounded extractive answer generation
 - Safety guard for unanswerable or unsupported questions
@@ -20,6 +20,10 @@ It is designed as a portfolio project for roles such as **AI Test Engineer**, **
   - context keyword recall
   - answer groundedness
   - hallucination-risk proxy
+  - RAGAS-style context precision
+  - RAGAS-style context recall
+  - RAGAS-style faithfulness
+  - RAGAS-style answer relevancy
   - unanswerable-question safety
   - overall pass rate
 - Failed-case classification
@@ -28,7 +32,7 @@ It is designed as a portfolio project for roles such as **AI Test Engineer**, **
 - Pytest regression tests
 - Dedicated answerable, unanswerable, hallucination-risk, and source-grounding tests
 - Streamlit demo app
-- FastAPI `/ask` endpoint with JSONL request logging
+- FastAPI `/ask`, `/evaluate`, `/feedback`, and `/metrics` endpoints with JSONL logging
 - Evaluation run logs for auditability
 - Dockerfile and GitHub Actions CI
 - China-facing portfolio notes in `docs/PROJECT_PORTFOLIO_CN.md`
@@ -76,7 +80,7 @@ pip install -r requirements.txt
 pytest -q
 ```
 
-The default retrieval path uses scikit-learn TF-IDF so tests and demos run without FAISS, PyTorch, or Hugging Face downloads.
+The default retrieval path uses local BM25 plus scikit-learn dense embeddings, so tests and demos run without FAISS, PyTorch, or Hugging Face downloads.
 
 ## Bilingual Coverage
 
@@ -95,8 +99,8 @@ The evaluation dataset includes English and Chinese answerable questions, unsupp
 This project borrows the evaluation structure used by benchmark frameworks such as OpenCompass:
 
 - **Dataset**: bilingual English/Chinese evaluation questions with expected sources, keywords, and answerability labels.
-- **Inferencer**: a RAG pipeline that retrieves top-k context chunks and generates extractive answers.
-- **Evaluator**: rule-based checks for retrieval quality, answer keyword recall, context recall, source grounding, hallucination risk, and unanswerable safety.
+- **Inferencer**: a RAG pipeline that uses hybrid BM25 + embedding retrieval, then generates extractive answers.
+- **Evaluator**: rule-based and RAGAS-style checks for retrieval quality, answer keyword recall, context recall, source grounding, hallucination risk, faithfulness, answer relevancy, and unanswerable safety.
 - **Reporter**: CSV, Markdown, failed-case analysis, and JSONL evaluation logs.
 
 The goal is not leaderboard ranking. The goal is RAG regression testing: every code or knowledge-base change can be checked against answerability, grounding, and safety gates.
@@ -160,6 +164,28 @@ API requests are logged to:
 logs/api_requests.jsonl
 ```
 
+Evaluate one question with expected labels:
+
+```bash
+curl -X POST http://127.0.0.1:8000/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{"question": "标准配送通常需要多长时间?", "expected_source": "shipping_policy_zh.md", "expected_keywords": "标准配送;3到5个工作日", "question_type": "normal"}'
+```
+
+Submit user feedback:
+
+```bash
+curl -X POST http://127.0.0.1:8000/feedback \
+  -H "Content-Type: application/json" \
+  -d '{"question": "标准配送通常需要多长时间?", "answer": "标准配送通常需要3到5个工作日。", "rating": 5, "comment": "Grounded answer"}'
+```
+
+Read service/evaluation metrics:
+
+```bash
+curl http://127.0.0.1:8000/metrics
+```
+
 ## Run with Docker
 
 ```bash
@@ -182,6 +208,10 @@ http://localhost:8501
 | `context_keyword_recall` | Whether retrieved context contains expected keywords |
 | `answer_groundedness` | Proxy score for whether answer claims are supported by retrieved context |
 | `hallucination_risk` | `1 - answer_groundedness` |
+| `ragas_context_precision` | RAGAS-style proxy for whether expected source appears early in retrieved contexts |
+| `ragas_context_recall` | RAGAS-style proxy for whether retrieved context contains expected evidence |
+| `ragas_faithfulness` | RAGAS-style proxy based on answer groundedness |
+| `ragas_answer_relevancy` | RAGAS-style proxy based on expected keyword coverage |
 | `unanswerable_safe` | Whether unsupported questions are safely refused |
 | `overall_pass_rate` | Combined pass rate across applicable checks |
 
@@ -207,7 +237,7 @@ Unanswerable / safety cases:
 
 ## Resume Description
 
-Built a bilingual English/Chinese automated evaluation framework for a customer-support RAG chatbot, including document ingestion, text chunking, local vector retrieval, source-grounded answer generation, hallucination-risk proxy metrics, unanswerable-question safety checks, failed-case analysis, pytest regression tests, Streamlit demo, Docker packaging, and CI workflow.
+Built a bilingual English/Chinese automated evaluation framework for a customer-support RAG chatbot, including document ingestion, text chunking, hybrid BM25 + embedding retrieval, source-grounded answer generation, RAGAS-style metrics, hallucination-risk proxy metrics, unanswerable-question safety checks, failed-case analysis, FastAPI endpoints, request/evaluation logging, pytest regression tests, Streamlit demo, Docker packaging, and CI workflow.
 
 ## China-Facing Positioning
 

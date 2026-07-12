@@ -20,6 +20,10 @@ def main() -> None:
         "avg_source_match": 0.75,
         "avg_keyword_recall": 0.60,
         "avg_unanswerable_safe": 0.80,
+        "avg_ragas_context_precision": 0.75,
+        "avg_ragas_context_recall": 0.75,
+        "avg_ragas_faithfulness": 0.80,
+        "avg_ragas_answer_relevancy": 0.60,
     }
 
     failed = []

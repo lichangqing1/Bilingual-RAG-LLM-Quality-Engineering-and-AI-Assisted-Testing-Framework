@@ -1,2 +1,2 @@
-total_questions,answerable_questions,unanswerable_questions,avg_source_match,avg_keyword_recall,avg_context_keyword_recall,avg_answer_groundedness,avg_hallucination_risk,avg_unanswerable_safe,overall_pass_rate
-61,51,10,1.0,1.0,1.0,1.0,0.0,1.0,1.0
+total_questions,answerable_questions,unanswerable_questions,avg_source_match,avg_keyword_recall,avg_context_keyword_recall,avg_answer_groundedness,avg_hallucination_risk,avg_ragas_context_precision,avg_ragas_context_recall,avg_ragas_faithfulness,avg_ragas_answer_relevancy,avg_unanswerable_safe,overall_pass_rate
+61,51,10,1.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,1.0,1.0,1.0

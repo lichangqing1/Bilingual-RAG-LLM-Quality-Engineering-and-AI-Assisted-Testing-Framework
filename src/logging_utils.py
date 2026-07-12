@@ -16,5 +16,5 @@ def append_jsonl(path: str | Path, record: Dict[str, Any]) -> str:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     enriched = {"timestamp": utc_timestamp(), **record}
     with log_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(enriched, ensure_ascii=False) + "\n")
+        f.write(json.dumps(enriched, ensure_ascii=False, default=str) + "\n")
     return str(log_path)
