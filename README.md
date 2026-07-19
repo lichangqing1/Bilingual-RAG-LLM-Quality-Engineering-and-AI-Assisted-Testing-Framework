@@ -1,4 +1,4 @@
-# Bilingual RAG Evaluation and Security Testing Framework
+# Bilingual RAG Evaluation and Safety Testing Framework
 
 `rag-evaluation-framework` is a bilingual English/Chinese customer-support RAG project with automated evaluation for retrieval quality, faithfulness, citation accuracy, unanswerable-question handling, and security behavior.
 
