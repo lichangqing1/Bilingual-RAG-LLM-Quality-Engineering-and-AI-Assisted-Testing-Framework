@@ -14,7 +14,6 @@ def test_formal_framework_files_exist():
         "docs/EVALUATION_METRICS.md",
         "docs/SECURITY_EVALUATION.md",
         "docs/PROJECT_PORTFOLIO_CN.md",
-        "docs/COLAB_EXECUTION.md",
         "scripts/run_security_evaluation.py",
         "data/evaluation/rag_eval_en.csv",
         "data/evaluation/rag_eval_zh.csv",

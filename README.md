@@ -13,7 +13,7 @@ The project builds a source-grounded RAG assistant over English and Chinese poli
 - Bilingual English/Chinese customer-support knowledge base
 - Lexical, semantic, and hybrid retrieval modes
 - Main semantic path: Sentence-Transformers + FAISS
-- Lightweight default install for CI and Colab
+- Lightweight default install for CI and local development
 - Source-cited extractive answers
 - Safe refusal for unsupported questions
 - RAGAS-style deterministic metrics
@@ -111,8 +111,6 @@ Run regression gates:
 ```bash
 python scripts/run_regression_checks.py
 ```
-
-For Colab, use [docs/COLAB_EXECUTION.md](docs/COLAB_EXECUTION.md).
 
 ## API Demo
 
@@ -215,7 +213,6 @@ rag-evaluation-framework/
 │       └── security_questions.csv
 ├── docs/
 │   ├── ARCHITECTURE.md
-│   ├── COLAB_EXECUTION.md
 │   ├── EVALUATION_METRICS.md
 │   ├── PROJECT_PORTFOLIO_CN.md
 │   └── SECURITY_EVALUATION.md
