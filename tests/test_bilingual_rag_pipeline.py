@@ -7,15 +7,15 @@ from src.evaluator import (
     hallucination_risk,
 )
 from src.rag_pipeline import SimpleRAGPipeline
+from src.retrievers.hybrid_retriever import HybridRetriever
 from src.text_splitter import create_chunks
-from src.tfidf_vector_store import TfidfVectorStore
 
 
 def build_bilingual_rag():
     docs = load_markdown_documents("data/documents")
     validate_documents(docs)
     chunks = create_chunks(docs, chunk_size=500, overlap=100)
-    vector_store = TfidfVectorStore()
+    vector_store = HybridRetriever()
     vector_store.build_index(chunks)
     return SimpleRAGPipeline(vector_store, top_k=3)
 

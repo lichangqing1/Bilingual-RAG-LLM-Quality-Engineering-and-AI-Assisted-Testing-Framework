@@ -1,257 +1,245 @@
-# AI Customer Support RAG Assistant with Automated Evaluation Framework
+# Bilingual RAG Evaluation and Security Testing Framework
 
-This project implements a bilingual English/Chinese customer-support Retrieval-Augmented Generation (RAG) assistant and an automated evaluation framework for testing retrieval quality, grounded answer generation, hallucination risk, and safe handling of unanswerable questions.
+`rag-evaluation-framework` is a bilingual English/Chinese customer-support RAG project with automated evaluation for retrieval quality, faithfulness, citation accuracy, unanswerable-question handling, and security behavior.
 
-It is designed as a portfolio project for roles such as **AI Test Engineer**, **LLM Evaluation Engineer**, **RAG Evaluation Engineer**, **AI QA Engineer**, and **Test Development Engineer**.
+It is designed as a portfolio project for AI Test Engineer, LLM Evaluation Engineer, RAG Evaluation Engineer, AI QA Engineer, and AI Application Engineer roles.
 
-## Project Highlights
+## Overview
 
-- English and Chinese Markdown customer-support knowledge base
-- Document loading and validation
-- Text chunking with overlap
-- Hybrid retrieval with BM25 + local dense embeddings for reliable demos and regression runs
-- Optional FAISS vector retrieval with sentence-transformer embeddings
-- Source-grounded extractive answer generation
-- Safety guard for unanswerable or unsupported questions
-- English and Chinese evaluation dataset with answerable and unanswerable cases
-- Automated metrics:
-  - source match
-  - keyword recall
-  - context keyword recall
-  - answer groundedness
-  - hallucination-risk proxy
-  - RAGAS-style context precision
-  - RAGAS-style context recall
-  - RAGAS-style faithfulness
-  - RAGAS-style answer relevancy
-  - unanswerable-question safety
-  - overall pass rate
-- Failed-case classification
-- Chinese failed-case analysis with metric details and remediation suggestions
-- OpenCompass-style dataset/inferencer/evaluator/report framing
-- Pytest regression tests
-- Dedicated answerable, unanswerable, hallucination-risk, and source-grounding tests
-- Streamlit demo app
-- FastAPI `/ask`, `/evaluate`, `/feedback`, and `/metrics` endpoints with JSONL logging
-- Evaluation run logs for auditability
-- Dockerfile and GitHub Actions CI
-- China-facing portfolio notes in `docs/PROJECT_PORTFOLIO_CN.md`
+The project builds a source-grounded RAG assistant over English and Chinese policy documents, then evaluates the assistant with deterministic regression tests. The goal is not leaderboard comparison; the goal is repeatable RAG quality testing whenever retrieval, chunking, prompts, or knowledge-base files change.
 
-## Project Structure
+## Key Features
+
+- Bilingual English/Chinese customer-support knowledge base
+- Lexical, semantic, and hybrid retrieval modes
+- Main semantic path: Sentence-Transformers + FAISS
+- Lightweight default install for CI and Colab
+- Source-cited extractive answers
+- Safe refusal for unsupported questions
+- RAGAS-style deterministic metrics
+- Security evaluation with `security_pass_rate`
+- Streamlit demo and FastAPI service
+- Pytest and GitHub Actions CI
+
+## Architecture
 
 ```text
-.
-├── app.py
-├── data/
-│   ├── documents/
-│   └── evaluation/evaluation_questions.csv
-├── docs/
-│   ├── ARCHITECTURE.md
-│   └── PROJECT_PORTFOLIO_CN.md
-├── scripts/
-│   ├── run_evaluation.py
-│   └── run_regression_checks.py
-├── src/
-│   ├── document_loader.py
-│   ├── text_splitter.py
-│   ├── tfidf_vector_store.py
-│   ├── vector_store.py
-│   ├── rag_pipeline.py
-│   ├── evaluator.py
-│   └── report_generator.py
-├── tests/
-├── results/
-├── Dockerfile
-└── requirements.txt
+Documents -> Chunks -> Retriever -> RAG Answer -> Evaluator -> Reports
 ```
 
-## Setup
+The retriever package is organized as:
+
+```text
+src/retrievers/
+├── base.py
+├── lexical_retriever.py
+├── semantic_retriever.py
+└── hybrid_retriever.py
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical design.
+
+## Evaluation Results
+
+Current deterministic benchmark:
+
+```text
+overall_pass_rate: 1.00
+security_pass_rate: 1.00
+```
+
+The prepared benchmark currently reaches a 100% pass rate on the small bilingual customer-support evaluation set. This is intended as a regression gate for retrieval, grounding, citation, unanswerable handling, and safety behavior, not as a public leaderboard score.
+
+Generated result files:
+
+```text
+results/evaluation_report.md
+results/summary_report.csv
+results/security_summary.csv
+results/evaluation_results.csv
+results/security_evaluation_results.csv
+results/failed_cases.csv
+```
+
+`failed_cases.csv` is empty in the current run because all prepared benchmark cases passed.
+
+Metric details live in [docs/EVALUATION_METRICS.md](docs/EVALUATION_METRICS.md).
+
+## Retrieval Modes
+
+| Mode | Implementation | Notes |
+|---|---|---|
+| `lexical` | BM25 / TF-IDF | Fast baseline and CI-friendly fallback |
+| `semantic` | Sentence-Transformers + FAISS, or local semantic backend | Better for paraphrased questions |
+| `hybrid` | Lexical + semantic score fusion | Default mode and best overall balance |
+
+The default backend is local and lightweight. To use FAISS:
+
+```bash
+pip install -r requirements-vector.txt
+python scripts/run_evaluation.py --retrieval-mode semantic --semantic-backend faiss
+```
+
+## How To Run
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # macOS/Linux
-# .venv\Scripts\activate   # Windows
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run Unit Tests
+Run tests:
 
 ```bash
 pytest -q
 ```
 
-The default retrieval path uses local BM25 plus scikit-learn dense embeddings, so tests and demos run without FAISS, PyTorch, or Hugging Face downloads.
-
-## Bilingual Coverage
-
-The knowledge base includes English and Chinese policy documents for:
-
-- returns
-- shipping
-- payments
-- warranty
-- account support
-
-The evaluation dataset includes English and Chinese answerable questions, unsupported/unanswerable questions, expected sources, and expected keyword checks.
-
-## OpenCompass-Style Evaluation Framing
-
-This project borrows the evaluation structure used by benchmark frameworks such as OpenCompass:
-
-- **Dataset**: bilingual English/Chinese evaluation questions with expected sources, keywords, and answerability labels.
-- **Inferencer**: a RAG pipeline that uses hybrid BM25 + embedding retrieval, then generates extractive answers.
-- **Evaluator**: rule-based and RAGAS-style checks for retrieval quality, answer keyword recall, context recall, source grounding, hallucination risk, faithfulness, answer relevancy, and unanswerable safety.
-- **Reporter**: CSV, Markdown, failed-case analysis, and JSONL evaluation logs.
-
-The goal is not leaderboard ranking. The goal is RAG regression testing: every code or knowledge-base change can be checked against answerability, grounding, and safety gates.
-
-## Run Full Evaluation
+Run full evaluation:
 
 ```bash
 python scripts/run_evaluation.py
 ```
 
-The script writes:
+Run security evaluation:
 
-```text
-results/evaluation_results.csv
-results/failed_cases.csv
-results/summary_report.csv
-results/evaluation_report.md
-logs/evaluation_runs.jsonl
-logs/evaluation_failed_cases.jsonl
+```bash
+python scripts/run_security_evaluation.py
 ```
 
-`failed_cases.csv` includes failure type, failure detail, language, and recommendation fields. When there are Chinese failures, the Markdown report includes a dedicated Chinese failed-case analysis section.
-
-## Run Regression Gates
+Run regression gates:
 
 ```bash
 python scripts/run_regression_checks.py
 ```
 
-This checks whether key evaluation metrics stay above minimum thresholds. It is useful for detecting regressions when the retrieval pipeline, chunk size, or answer generation logic changes.
+For Colab, use [docs/COLAB_EXECUTION.md](docs/COLAB_EXECUTION.md).
 
-## Run Streamlit Demo
+## API Demo
 
-```bash
-streamlit run app.py
-```
-
-## Run FastAPI Service
+Run FastAPI locally:
 
 ```bash
 uvicorn api:app --reload --port 8000
 ```
 
-Health check:
+Open:
 
-```bash
-curl http://127.0.0.1:8000/health
+```text
+http://127.0.0.1:8000/docs
 ```
 
-Ask a bilingual RAG question:
+Example request:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "标准配送通常需要多长时间?", "top_k": 3}'
+  -d '{"question": "How long does standard shipping take?", "retrieval_mode": "hybrid", "semantic_backend": "local"}'
 ```
 
-API requests are logged to:
+Available endpoints:
 
 ```text
-logs/api_requests.jsonl
+GET  /health
+POST /ask
+POST /evaluate
+POST /feedback
+GET  /metrics
+GET  /logs/summary
 ```
 
-Evaluate one question with expected labels:
+## Streamlit Demo
 
 ```bash
-curl -X POST http://127.0.0.1:8000/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"question": "标准配送通常需要多长时间?", "expected_source": "shipping_policy_zh.md", "expected_keywords": "标准配送;3到5个工作日", "question_type": "normal"}'
+streamlit run app.py
 ```
 
-Submit user feedback:
+The Streamlit UI defaults to the local backend. Selecting FAISS in the UI requires:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/feedback \
-  -H "Content-Type: application/json" \
-  -d '{"question": "标准配送通常需要多长时间?", "answer": "标准配送通常需要3到5个工作日。", "rating": 5, "comment": "Grounded answer"}'
+pip install -r requirements-vector.txt
 ```
 
-Read service/evaluation metrics:
+## Docker
 
-```bash
-curl http://127.0.0.1:8000/metrics
-```
-
-## Run with Docker
+The default Dockerfile starts the Streamlit demo:
 
 ```bash
 docker build -t rag-evaluation-framework .
-docker run -p 8501:8501 rag-evaluation-framework
+docker run --rm -p 8501:8501 rag-evaluation-framework
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:8501
 ```
 
-## Evaluation Metrics
+To run FastAPI locally, use:
 
-| Metric | Meaning |
-|---|---|
-| `source_match` | Whether the expected document appears in retrieved sources |
-| `keyword_recall` | Whether the generated answer contains expected keywords |
-| `context_keyword_recall` | Whether retrieved context contains expected keywords |
-| `answer_groundedness` | Proxy score for whether answer claims are supported by retrieved context |
-| `hallucination_risk` | `1 - answer_groundedness` |
-| `ragas_context_precision` | RAGAS-style proxy for whether expected source appears early in retrieved contexts |
-| `ragas_context_recall` | RAGAS-style proxy for whether retrieved context contains expected evidence |
-| `ragas_faithfulness` | RAGAS-style proxy based on answer groundedness |
-| `ragas_answer_relevancy` | RAGAS-style proxy based on expected keyword coverage |
-| `unanswerable_safe` | Whether unsupported questions are safely refused |
-| `overall_pass_rate` | Combined pass rate across applicable checks |
+```bash
+uvicorn api:app --reload --port 8000
+```
 
-## Example Questions
+Or run FastAPI from the same Docker image:
 
-Answerable:
+```bash
+docker run --rm -p 8000:8000 rag-evaluation-framework \
+  uvicorn api:app --host 0.0.0.0 --port 8000
+```
 
-- How long does standard shipping usually take?
-- What payment methods does the company accept?
-- Can customized products be returned?
-- 标准配送通常需要多长时间?
-- 公司接受哪些付款方式?
-- 定制商品可以退货吗?
+## Test And CI
 
-Unanswerable / safety cases:
+GitHub Actions installs `requirements.txt`, then runs:
 
-- Can I pay with cryptocurrency?
-- Does the company provide international shipping?
-- Can I return a product after 90 days?
-- 我可以用加密货币付款吗?
-- 公司提供国际配送吗?
-- 90天后我还能退货吗?
+```bash
+pytest -q
+python scripts/run_evaluation.py
+python scripts/run_security_evaluation.py
+python scripts/run_regression_checks.py
+```
 
-## Resume Description
+This ensures the regression gate uses freshly generated evaluation results.
 
-Built a bilingual English/Chinese automated evaluation framework for a customer-support RAG chatbot, including document ingestion, text chunking, hybrid BM25 + embedding retrieval, source-grounded answer generation, RAGAS-style metrics, hallucination-risk proxy metrics, unanswerable-question safety checks, failed-case analysis, FastAPI endpoints, request/evaluation logging, pytest regression tests, Streamlit demo, Docker packaging, and CI workflow.
+## Project Structure
 
-## China-Facing Positioning
+```text
+rag-evaluation-framework/
+├── .github/workflows/ci.yml
+├── configs/rag_eval_config.yaml
+├── data/
+│   ├── documents/
+│   └── evaluation/
+│       ├── evaluation_questions.csv
+│       ├── rag_eval_en.csv
+│       ├── rag_eval_zh.csv
+│       └── security_questions.csv
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── COLAB_EXECUTION.md
+│   ├── EVALUATION_METRICS.md
+│   ├── PROJECT_PORTFOLIO_CN.md
+│   └── SECURITY_EVALUATION.md
+├── results/
+│   ├── evaluation_report.md
+│   ├── summary_report.csv
+│   └── security_summary.csv
+├── scripts/
+│   ├── run_evaluation.py
+│   ├── run_security_evaluation.py
+│   └── run_regression_checks.py
+├── src/
+│   ├── retrievers/
+│   ├── rag_pipeline.py
+│   ├── evaluator.py
+│   └── report_generator.py
+├── tests/
+├── api.py
+├── app.py
+├── Dockerfile
+├── requirements.txt
+└── requirements-vector.txt
+```
 
-Recommended Chinese project title:
+## Job Application Value
 
-> RAG智能问答系统评测与自动化测试框架
-
-Recommended target roles:
-
-- 大模型测试工程师
-- AI测试开发工程师
-- 大模型评测工程师
-- RAG评测工程师
-- 算法测试工程师
-- 测试开发工程师
-
-See `docs/PROJECT_PORTFOLIO_CN.md` for a Chinese resume-style explanation.
+This project demonstrates practical RAG engineering and AI testing skills: bilingual data preparation, retrieval comparison, deterministic evaluation design, hallucination-risk checks, source grounding, API logging, safety regression testing, CI gates, and deployable demos.

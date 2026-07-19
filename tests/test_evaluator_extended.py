@@ -8,6 +8,7 @@ from src.evaluator import (
     identify_failed_cases,
     hallucination_risk,
     evaluate_single_case,
+    summarize_results,
     ragas_answer_relevancy,
     ragas_context_precision,
     ragas_context_recall,
@@ -82,3 +83,51 @@ def test_ragas_style_metrics():
     assert ragas_context_recall(context, "标准配送;3到5个工作日") == 1.0
     assert ragas_faithfulness(answer, context) == 1.0
     assert ragas_answer_relevancy(answer, "标准配送;3到5个工作日") == 1.0
+
+
+def test_summary_includes_security_pass_rate():
+    df = pd.DataFrame([
+        {
+            "question_type": "prompt_injection",
+            "source_match": None,
+            "keyword_recall": None,
+            "context_keyword_recall": None,
+            "answer_groundedness": None,
+            "hallucination_risk": None,
+            "context_precision": None,
+            "context_recall": None,
+            "faithfulness": None,
+            "answer_relevancy": None,
+            "faithfulness_failure_hallucination_risk": None,
+            "citation_accuracy": None,
+            "ragas_context_precision": None,
+            "ragas_context_recall": None,
+            "ragas_faithfulness": None,
+            "ragas_answer_relevancy": None,
+            "unanswerable_safe": 1,
+        },
+        {
+            "question_type": "prompt_injection",
+            "source_match": None,
+            "keyword_recall": None,
+            "context_keyword_recall": None,
+            "answer_groundedness": None,
+            "hallucination_risk": None,
+            "context_precision": None,
+            "context_recall": None,
+            "faithfulness": None,
+            "answer_relevancy": None,
+            "faithfulness_failure_hallucination_risk": None,
+            "citation_accuracy": None,
+            "ragas_context_precision": None,
+            "ragas_context_recall": None,
+            "ragas_faithfulness": None,
+            "ragas_answer_relevancy": None,
+            "unanswerable_safe": 0,
+        },
+    ])
+
+    summary = summarize_results(add_pass_fail_flags(df)).iloc[0]
+
+    assert summary["security_questions"] == 2
+    assert summary["security_pass_rate"] == 0.5

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
 import time
@@ -17,17 +18,18 @@ from src.document_loader import load_markdown_documents, validate_documents
 from src.evaluator import (
     add_pass_fail_flags,
     evaluate_single_case,
-    summarize_results,
 )
 from src.logging_utils import append_jsonl
 from src.rag_pipeline import SimpleRAGPipeline
+from src.retrieval import build_vector_store
 from src.text_splitter import create_chunks
-from src.tfidf_vector_store import TfidfVectorStore
 
 
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1)
     top_k: int = Field(3, ge=1, le=5)
+    retrieval_mode: str = "hybrid"
+    semantic_backend: str = "local"
 
 
 class AskResponse(BaseModel):
@@ -45,6 +47,8 @@ class EvaluateRequest(BaseModel):
     expected_keywords: str = ""
     question_type: str = "normal"
     top_k: int = Field(3, ge=1, le=5)
+    retrieval_mode: str = "hybrid"
+    semantic_backend: str = "local"
 
 
 class EvaluateResponse(BaseModel):
@@ -68,11 +72,36 @@ class FeedbackResponse(BaseModel):
     log_path: str
 
 
-def build_rag(top_k: int = 3) -> SimpleRAGPipeline:
+LOG_FILES = {
+    "api_requests": "api_requests.jsonl",
+    "api_evaluations": "api_evaluations.jsonl",
+    "feedback": "feedback.jsonl",
+    "evaluation_runs": "evaluation_runs.jsonl",
+    "evaluation_failed_cases": "evaluation_failed_cases.jsonl",
+}
+LOG_DIR = PROJECT_PATH / "logs"
+LOG_PATH_OVERRIDES: Dict[str, Path] = {}
+
+
+def write_log(log_name: str, record: Dict[str, Any]) -> str:
+    """Write a log record and remember the concrete path used."""
+    if log_name not in LOG_FILES:
+        raise ValueError(f"Unknown log name: {log_name}")
+    log_path = append_jsonl(LOG_DIR / LOG_FILES[log_name], record)
+    LOG_PATH_OVERRIDES[log_name] = Path(log_path)
+    return log_path
+
+
+def get_log_path(log_name: str) -> Path:
+    """Return the latest concrete path for a known log file."""
+    return LOG_PATH_OVERRIDES.get(log_name, LOG_DIR / LOG_FILES[log_name])
+
+
+def build_rag(top_k: int = 3, retrieval_mode: str = "hybrid", semantic_backend: str = "local") -> SimpleRAGPipeline:
     docs = load_markdown_documents(str(PROJECT_PATH / "data" / "documents"))
     validate_documents(docs)
     chunks = create_chunks(docs, chunk_size=500, overlap=100)
-    vector_store = TfidfVectorStore()
+    vector_store = build_vector_store(retrieval_mode=retrieval_mode, semantic_backend=semantic_backend)
     vector_store.build_index(chunks)
     return SimpleRAGPipeline(vector_store, top_k=top_k)
 
@@ -87,6 +116,51 @@ def json_safe_dict(record: Dict[str, Any]) -> Dict[str, Any]:
         else:
             safe[key] = value
     return safe
+
+
+def summarize_jsonl_log(path: Path) -> Dict[str, Any]:
+    """Return a compact, safe summary of a JSONL log file."""
+    summary: Dict[str, Any] = {
+        "path": str(path),
+        "exists": path.exists(),
+        "line_count": 0,
+        "last_timestamp": None,
+        "last_event": None,
+    }
+    if not path.exists():
+        return summary
+
+    last_record: Dict[str, Any] = {}
+    malformed_lines = 0
+    with path.open("r", encoding="utf-8") as file:
+        for line in file:
+            if not line.strip():
+                continue
+            summary["line_count"] += 1
+            try:
+                last_record = json.loads(line)
+            except json.JSONDecodeError:
+                malformed_lines += 1
+
+    summary["malformed_lines"] = malformed_lines
+    if last_record:
+        summary["last_timestamp"] = last_record.get("timestamp")
+        summary["last_event"] = last_record.get("event")
+    return summary
+
+
+def build_logs_summary() -> Dict[str, Any]:
+    """Summarize all known runtime and evaluation logs."""
+    logs = {
+        name: summarize_jsonl_log(get_log_path(name))
+        for name in LOG_FILES
+    }
+    return {
+        "status": "ok",
+        "log_dir": str(LOG_DIR),
+        "logs": logs,
+        "total_log_lines": sum(item["line_count"] for item in logs.values()),
+    }
 
 
 app = FastAPI(
@@ -105,15 +179,21 @@ def health() -> dict:
 def ask(request: AskRequest) -> AskResponse:
     start = time.perf_counter()
     try:
-        rag = build_rag(top_k=request.top_k)
+        rag = build_rag(
+            top_k=request.top_k,
+            retrieval_mode=request.retrieval_mode,
+            semantic_backend=request.semantic_backend,
+        )
         result = rag.ask(request.question)
     except Exception as exc:
-        append_jsonl(
-            PROJECT_PATH / "logs" / "api_requests.jsonl",
+        write_log(
+            "api_requests",
             {
                 "event": "api_request_failed",
                 "question": request.question,
                 "top_k": request.top_k,
+                "retrieval_mode": request.retrieval_mode,
+                "semantic_backend": request.semantic_backend,
                 "error": str(exc),
             },
         )
@@ -127,12 +207,14 @@ def ask(request: AskRequest) -> AskResponse:
         retrieved_context=str(result.get("retrieved_context", "")),
         latency_ms=latency_ms,
     )
-    append_jsonl(
-        PROJECT_PATH / "logs" / "api_requests.jsonl",
+    write_log(
+        "api_requests",
         {
             "event": "api_request_completed",
             "question": response.question,
             "top_k": request.top_k,
+            "retrieval_mode": request.retrieval_mode,
+            "semantic_backend": request.semantic_backend,
             "answer": response.answer,
             "sources": response.sources,
             "latency_ms": response.latency_ms,
@@ -145,7 +227,11 @@ def ask(request: AskRequest) -> AskResponse:
 def evaluate(request: EvaluateRequest) -> EvaluateResponse:
     start = time.perf_counter()
     try:
-        rag = build_rag(top_k=request.top_k)
+        rag = build_rag(
+            top_k=request.top_k,
+            retrieval_mode=request.retrieval_mode,
+            semantic_backend=request.semantic_backend,
+        )
         result = rag.ask(request.question)
         expected = pd.Series({
             "question": request.question,
@@ -157,11 +243,13 @@ def evaluate(request: EvaluateRequest) -> EvaluateResponse:
         metrics = evaluate_single_case(result, expected)
         metrics_with_flags = json_safe_dict(add_pass_fail_flags(pd.DataFrame([metrics])).iloc[0].to_dict())
     except Exception as exc:
-        append_jsonl(
-            PROJECT_PATH / "logs" / "api_evaluations.jsonl",
+        write_log(
+            "api_evaluations",
             {
                 "event": "api_evaluation_failed",
                 "question": request.question,
+                "retrieval_mode": request.retrieval_mode,
+                "semantic_backend": request.semantic_backend,
                 "error": str(exc),
             },
         )
@@ -175,13 +263,15 @@ def evaluate(request: EvaluateRequest) -> EvaluateResponse:
         metrics=metrics_with_flags,
         latency_ms=latency_ms,
     )
-    append_jsonl(
-        PROJECT_PATH / "logs" / "api_evaluations.jsonl",
+    write_log(
+        "api_evaluations",
         {
             "event": "api_evaluation_completed",
             "question": response.question,
             "answer": response.answer,
             "sources": response.sources,
+            "retrieval_mode": request.retrieval_mode,
+            "semantic_backend": request.semantic_backend,
             "metrics": response.metrics,
             "latency_ms": response.latency_ms,
         },
@@ -191,8 +281,8 @@ def evaluate(request: EvaluateRequest) -> EvaluateResponse:
 
 @app.post("/feedback", response_model=FeedbackResponse)
 def feedback(request: FeedbackRequest) -> FeedbackResponse:
-    log_path = append_jsonl(
-        PROJECT_PATH / "logs" / "feedback.jsonl",
+    log_path = write_log(
+        "feedback",
         {
             "event": "feedback_received",
             "question": request.question,
@@ -213,20 +303,19 @@ def metrics() -> dict:
     else:
         summary = {}
 
-    log_counts = {}
-    for name, path in {
-        "api_requests": PROJECT_PATH / "logs" / "api_requests.jsonl",
-        "api_evaluations": PROJECT_PATH / "logs" / "api_evaluations.jsonl",
-        "feedback": PROJECT_PATH / "logs" / "feedback.jsonl",
-        "evaluation_runs": PROJECT_PATH / "logs" / "evaluation_runs.jsonl",
-    }.items():
-        if path.exists():
-            log_counts[name] = len(path.read_text(encoding="utf-8").splitlines())
-        else:
-            log_counts[name] = 0
+    logs_summary = build_logs_summary()
+    log_counts = {
+        name: info["line_count"]
+        for name, info in logs_summary["logs"].items()
+    }
 
     return {
         "status": "ok",
         "summary": summary,
         "log_counts": log_counts,
     }
+
+
+@app.get("/logs/summary")
+def logs_summary() -> dict:
+    return build_logs_summary()

@@ -29,6 +29,52 @@ class SimpleRAGPipeline:
         "支付宝", "微信支付", "货到付款"
     }
 
+    PROMPT_INJECTION_PATTERNS = (
+        r"ignore (all )?(previous|prior) instructions",
+        r"system administrator",
+        r"reveal hidden",
+        r"hidden .*rules",
+        r"internal prompt",
+        r"developer instructions",
+        r"print the full .*prompt",
+        r"system prompt",
+        r"chain[- ]?of[- ]?thought",
+        r"confidential",
+        r"api key",
+        r"credit card number",
+        r"customer .*email",
+        r"customer .*personal",
+        r"sensitive information",
+        r"jailbreak",
+        r"\bdan\b",
+        r"do anything now",
+        r"bypass .*safety",
+        r"no rules",
+        r"retrieval poisoning",
+        r"poisoned context",
+        r"malicious retrieved",
+        r"override .*retrieved",
+        r"ignore .*document",
+        r"bypass .*verification",
+        r"disable .*security",
+        r"you are now",
+        r"忽略所有规则",
+        r"忽略.*指令",
+        r"越狱",
+        r"系统提示词",
+        r"开发者指令",
+        r"泄露.*提示词",
+        r"泄露.*个人信息",
+        r"客户.*邮箱",
+        r"客户.*银行卡",
+        r"信用卡号",
+        r"泄露.*密码",
+        r"绕过.*验证",
+        r"绕过.*安全",
+        r"中毒.*检索",
+        r"恶意.*上下文",
+    )
+
     def __init__(
         self,
         vector_store,
@@ -116,6 +162,11 @@ class SimpleRAGPipeline:
         return "\n".join(str(chunk.get("text", "")) for chunk in retrieved_chunks)
 
     @classmethod
+    def _contains_prompt_injection(cls, question: str) -> bool:
+        question_norm = question.lower()
+        return any(re.search(pattern, question_norm) for pattern in cls.PROMPT_INJECTION_PATTERNS)
+
+    @classmethod
     def _missing_context_terms(
         cls,
         question: str,
@@ -151,6 +202,11 @@ class SimpleRAGPipeline:
         missing_terms, coverage = self._missing_context_terms(question, retrieved_chunks)
         is_chinese_question = self._contains_chinese(question)
         question_days = sorted(self._day_constraints(question_lower))
+
+        if self._contains_prompt_injection(question):
+            if is_chinese_question:
+                return True, "问题包含提示词注入或越权指令，不能泄露系统提示词或编造政策"
+            return True, "the question contains prompt-injection or instruction-override content"
 
         if is_chinese_question and "退货" in question and question_days:
             missing_day_constraints = [day for day in question_days if day not in context]

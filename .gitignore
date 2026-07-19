@@ -18,3 +18,9 @@ logs/*.jsonl
 # Large/generated local indexes
 vector_store/
 *.index
+models/
+.cache/
+*.pkl
+*.faiss
+faiss.index
+metadata.pkl

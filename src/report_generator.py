@@ -22,8 +22,8 @@ def generate_markdown_report(summary_df: pd.DataFrame, failed_cases_df: pd.DataF
     )
     lines.append("- **Dataset**: bilingual English/Chinese policy questions with expected sources and keywords.")
     lines.append("- **Inferencer**: the RAG pipeline retrieves top-k chunks and generates extractive answers.")
-    lines.append("- **Retriever**: hybrid BM25 + local dense embeddings rank bilingual context chunks.")
-    lines.append("- **Evaluator**: rule-based and RAGAS-style metrics score source match, keyword recall, context recall, groundedness, hallucination risk, faithfulness, answer relevancy, and unanswerable safety.")
+    lines.append("- **Retriever**: configurable lexical baseline, semantic FAISS path, or hybrid score-fusion retrieval ranks bilingual context chunks.")
+    lines.append("- **Evaluator**: rule-based and RAGAS-style metrics score context precision, context recall, faithfulness, answer relevancy, citation accuracy, faithfulness failure / hallucination risk, and unanswerable safety.")
     lines.append("- **Reporter**: CSV and Markdown outputs summarize aggregate metrics and failed-case diagnostics.")
     lines.append(
         "Unlike a leaderboard benchmark, this framework is optimized for RAG QA regression: "
@@ -42,6 +42,11 @@ def generate_markdown_report(summary_df: pd.DataFrame, failed_cases_df: pd.DataF
             lines.append(f"- **Recommendation**: {row.get('recommendation', '')}")
             lines.append(f"- **Expected Source**: {row.get('expected_source', '')}")
             lines.append(f"- **Retrieved Sources**: {row.get('retrieved_sources', '')}")
+            lines.append(f"- **Context Precision**: {row.get('context_precision', '')}")
+            lines.append(f"- **Context Recall**: {row.get('context_recall', '')}")
+            lines.append(f"- **Faithfulness**: {row.get('faithfulness', '')}")
+            lines.append(f"- **Answer Relevancy**: {row.get('answer_relevancy', '')}")
+            lines.append(f"- **Citation Accuracy**: {row.get('citation_accuracy', '')}")
             lines.append(f"- **Keyword Recall**: {row.get('keyword_recall', '')}")
             lines.append(f"- **Missing Keywords**: {row.get('missing_keywords', '')}")
             lines.append(f"- **Answer**: {row.get('answer', '')}\n")

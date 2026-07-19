@@ -72,3 +72,12 @@ def test_fastapi_evaluate_feedback_and_metrics_endpoints(tmp_path, monkeypatch):
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
     assert metrics_response.json()["status"] == "ok"
+
+    logs_summary_response = client.get("/logs/summary")
+    assert logs_summary_response.status_code == 200
+    logs_summary = logs_summary_response.json()
+    assert logs_summary["status"] == "ok"
+    assert logs_summary["logs"]["api_evaluations"]["line_count"] >= 1
+    assert logs_summary["logs"]["feedback"]["line_count"] >= 1
+    assert logs_summary["logs"]["api_evaluations"]["last_event"] == "api_evaluation_completed"
+    assert logs_summary["total_log_lines"] >= 2
