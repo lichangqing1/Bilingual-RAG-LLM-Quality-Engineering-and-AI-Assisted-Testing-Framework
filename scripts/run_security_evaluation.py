@@ -1,8 +1,11 @@
 """Run the dedicated RAG safety and security evaluation suite."""
 import argparse
+import os
 from pathlib import Path
 import sys
 from typing import Dict
+
+os.environ.setdefault("ARROW_USER_SIMD_LEVEL", "NONE")
 
 import pandas as pd
 
@@ -19,6 +22,34 @@ from src.text_splitter import create_chunks
 
 
 SECURITY_DATASET = PROJECT_ROOT / "data" / "evaluation" / "security_questions.csv"
+
+
+def print_header(title: str) -> None:
+    """Print a readable CLI section header."""
+    line = "=" * 72
+    print(f"\n{line}")
+    print(title)
+    print(line)
+
+
+def print_subheader(title: str) -> None:
+    """Print a readable CLI subsection header."""
+    print(f"\n{title}")
+    print("-" * len(title))
+
+
+def print_key_values(values: Dict[str, object]) -> None:
+    """Print aligned key/value pairs for command-line reports."""
+    width = max((len(key) for key in values), default=0)
+    for key, value in values.items():
+        print(f"{key:<{width}} : {value}")
+
+
+def format_metric(value: object) -> str:
+    """Format summary metrics consistently."""
+    if isinstance(value, float):
+        return f"{value:.4f}"
+    return str(value)
 
 
 def load_security_questions(dataset_path: Path = SECURITY_DATASET) -> pd.DataFrame:
@@ -128,10 +159,24 @@ def main() -> None:
         semantic_backend=args.semantic_backend,
         top_k=args.top_k,
     )
-    print("Security evaluation completed.")
+    print_header("Security Evaluation Completed")
+    print_subheader("Run Configuration")
+    print_key_values(
+        {
+            "Dataset": SECURITY_DATASET,
+            "Retrieval mode": args.retrieval_mode,
+            "Semantic backend": args.semantic_backend,
+            "Top k": args.top_k,
+        }
+    )
+
+    print_subheader("Output Files")
     print(f"- security_evaluation_results: {PROJECT_ROOT / 'results' / 'security_evaluation_results.csv'}")
     print(f"- security_summary: {PROJECT_ROOT / 'results' / 'security_summary.csv'}")
-    print(summary.to_string(index=False))
+
+    print_subheader("Summary Metrics")
+    summary_record = summary.iloc[0].to_dict()
+    print_key_values({key: format_metric(value) for key, value in summary_record.items()})
 
 
 if __name__ == "__main__":

@@ -1,8 +1,11 @@
 """Run the full RAG evaluation workflow from the command line."""
 import argparse
+import os
 from pathlib import Path
 import sys
 from typing import Dict, List
+
+os.environ.setdefault("ARROW_USER_SIMD_LEVEL", "NONE")
 
 import pandas as pd
 
@@ -17,6 +20,34 @@ from src.rag_pipeline import SimpleRAGPipeline
 from src.evaluator import evaluate_dataset, save_evaluation_outputs, identify_failed_cases, summarize_results
 from src.logging_utils import append_jsonl
 from src.report_generator import generate_markdown_report
+
+
+def print_header(title: str) -> None:
+    """Print a readable CLI section header."""
+    line = "=" * 72
+    print(f"\n{line}")
+    print(title)
+    print(line)
+
+
+def print_subheader(title: str) -> None:
+    """Print a readable CLI subsection header."""
+    print(f"\n{title}")
+    print("-" * len(title))
+
+
+def print_key_values(values: Dict[str, object]) -> None:
+    """Print aligned key/value pairs for command-line reports."""
+    width = max((len(key) for key in values), default=0)
+    for key, value in values.items():
+        print(f"{key:<{width}} : {value}")
+
+
+def format_metric(value: object) -> str:
+    """Format summary metrics consistently."""
+    if isinstance(value, float):
+        return f"{value:.4f}"
+    return str(value)
 
 
 def parse_rag_eval_config(config_path: Path) -> Dict[str, object]:
@@ -174,11 +205,28 @@ def main() -> None:
             },
         )
 
-    print("Evaluation completed.")
+    print_header("RAG Evaluation Completed")
+    print_subheader("Run Configuration")
+    print_key_values(
+        {
+            "Dataset": config.get("dataset_name", ""),
+            "Dataset splits": ", ".join(
+                sorted(evaluation_df.get("dataset_split", pd.Series(dtype=str)).dropna().unique().tolist())
+            ),
+            "Retrieval mode": config.get("retrieval_mode", "hybrid"),
+            "Semantic backend": config.get("semantic_backend", "local"),
+            "Top k": config.get("top_k", 3),
+        }
+    )
+
+    print_subheader("Output Files")
     for name, path in outputs.items():
         print(f"- {name}: {path}")
     print(f"- markdown_report: {report_path}")
-    print(summary.to_string(index=False))
+
+    print_subheader("Summary Metrics")
+    summary_record = summary.iloc[0].to_dict()
+    print_key_values({key: format_metric(value) for key, value in summary_record.items()})
 
 
 if __name__ == "__main__":
