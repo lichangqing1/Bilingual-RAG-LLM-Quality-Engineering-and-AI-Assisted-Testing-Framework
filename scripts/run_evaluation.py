@@ -17,7 +17,7 @@ from src.document_loader import load_markdown_documents, validate_documents
 from src.text_splitter import create_chunks
 from src.retrieval import build_vector_store
 from src.rag_pipeline import SimpleRAGPipeline
-from src.evaluator import evaluate_dataset, save_evaluation_outputs, identify_failed_cases, summarize_results
+from src.evaluation.evaluator import evaluate_dataset, save_evaluation_outputs, identify_failed_cases, summarize_results
 from src.logging_utils import append_jsonl
 from src.report_generator import generate_markdown_report
 

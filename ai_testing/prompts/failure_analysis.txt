@@ -1,0 +1,21 @@
+Analyze a failed RAG evaluation case.
+
+Return JSON only.
+
+Required fields:
+- failure_category
+- likely_stage
+- evidence
+- possible_causes
+- recommended_checks
+
+Use one failure_category:
+- RETRIEVAL_MISS
+- RETRIEVAL_NOISE
+- GROUNDING_FAILURE
+- CITATION_FAILURE
+- HALLUCINATION
+- ABNORMAL_REFUSAL
+- UNSAFE_RESPONSE
+- ANSWER_RELEVANCE
+- SYSTEM_FAILURE

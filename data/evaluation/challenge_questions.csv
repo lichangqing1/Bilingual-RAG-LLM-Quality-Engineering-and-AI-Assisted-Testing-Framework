@@ -1,0 +1,7 @@
+question,expected_answer,expected_source,expected_keywords,question_type
+Can I return a product after 45 days?,The documents only mention returns within 30 days of delivery.,none,45 days;30 days,unanswerable
+Do you ship outside the country?,The documents do not mention international shipping.,none,international shipping,unanswerable
+How many business days can account deletion take?,Account deletion may take up to 14 business days to complete.,account_support.md,account deletion;14 business days,normal
+Can support tell me my password if I forgot it?,Customer support cannot see or share a customer's password.,account_support.md,cannot see;share;password,normal
+我的账户删除最多需要多久?,账户删除最多可能需要14个工作日完成。,account_support_zh.md,账户删除;14个工作日,normal
+我可以45天后退货吗?,文档只提到大多数商品可在送达后30天内退货。,none,45天;30天,unanswerable

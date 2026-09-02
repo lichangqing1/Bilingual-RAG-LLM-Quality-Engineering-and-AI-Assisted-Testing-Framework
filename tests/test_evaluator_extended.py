@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.evaluator import (
+from src.evaluation.evaluator import (
     answer_groundedness,
     add_pass_fail_flags,
     detect_language,

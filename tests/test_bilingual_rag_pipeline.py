@@ -1,7 +1,7 @@
 import pandas as pd
 
 from src.document_loader import load_markdown_documents, validate_documents
-from src.evaluator import (
+from src.evaluation.evaluator import (
     answer_groundedness,
     evaluate_single_case,
     hallucination_risk,

@@ -1,0 +1,11 @@
+Convert the requirement into structured testing intent.
+
+Return JSON only.
+
+Required fields:
+- requirement_id
+- title
+- acceptance_criteria
+- tags
+
+Focus on RAG quality, grounding, citation, refusal, safety, bilingual behavior, and generated test assets.

@@ -17,6 +17,10 @@
 - **avg_answer_relevancy**: 1.0000
 - **avg_faithfulness_failure_hallucination_risk**: 0.0000
 - **avg_citation_accuracy**: 1.0000
+- **avg_proxy_context_precision**: 1.0000
+- **avg_proxy_context_recall**: 1.0000
+- **avg_proxy_faithfulness**: 1.0000
+- **avg_proxy_answer_relevancy**: 1.0000
 - **avg_ragas_context_precision**: 1.0000
 - **avg_ragas_context_recall**: 1.0000
 - **avg_ragas_faithfulness**: 1.0000
@@ -31,7 +35,7 @@ This project follows an OpenCompass-style separation between dataset, inferencer
 - **Dataset**: bilingual English/Chinese policy questions with expected sources and keywords.
 - **Inferencer**: the RAG pipeline retrieves top-k chunks and generates extractive answers.
 - **Retriever**: configurable lexical baseline, semantic FAISS path, or hybrid score-fusion retrieval ranks bilingual context chunks.
-- **Evaluator**: rule-based and RAGAS-style metrics score context precision, context recall, faithfulness, answer relevancy, citation accuracy, faithfulness failure / hallucination risk, and unanswerable safety.
+- **Evaluator**: deterministic proxy metrics score context precision, context recall, faithfulness, answer relevancy, citation accuracy, faithfulness failure / hallucination risk, and unanswerable safety.
 - **Reporter**: CSV and Markdown outputs summarize aggregate metrics and failed-case diagnostics.
 Unlike a leaderboard benchmark, this framework is optimized for RAG QA regression: it checks whether answers stay grounded in the project knowledge base and whether unsupported questions are refused.
 

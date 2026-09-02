@@ -1,0 +1,22 @@
+Generate structured RAG/LLM quality test scenarios from this requirement.
+
+Return JSON only as a list of scenario objects.
+
+Each scenario must include:
+- requirement_id
+- name
+- type: positive, negative, boundary, or security
+- category
+- language: en or zh
+- input
+- expected_behavior: list of strings
+
+Requirement ID: {requirement_id}
+Title: {title}
+Tags: {tags}
+
+Acceptance criteria:
+{acceptance_criteria}
+
+Description:
+{description}

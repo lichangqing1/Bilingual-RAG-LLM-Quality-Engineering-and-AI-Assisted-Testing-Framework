@@ -81,3 +81,36 @@ def test_fastapi_evaluate_feedback_and_metrics_endpoints(tmp_path, monkeypatch):
     assert logs_summary["logs"]["feedback"]["line_count"] >= 1
     assert logs_summary["logs"]["api_evaluations"]["last_event"] == "api_evaluation_completed"
     assert logs_summary["total_log_lines"] >= 2
+
+
+def test_fastapi_ai_testing_generate_endpoint_logs_assets(tmp_path, monkeypatch):
+    import api
+
+    original_append_jsonl = api.append_jsonl
+
+    def append_to_tmp(path, record):
+        return original_append_jsonl(tmp_path / path.name, record)
+
+    monkeypatch.setattr(api, "append_jsonl", append_to_tmp)
+    client = testclient.TestClient(api.app)
+
+    response = client.post(
+        "/testing/generate",
+        json={
+            "requirement_id": "REQ-API-001",
+            "requirement_text": (
+                "RAG answers must cite sources, refuse unsupported questions, "
+                "and include bilingual English and Chinese examples."
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["requirement"]["requirement_id"] == "REQ-API-001"
+    assert len(payload["scenarios"]) >= 4
+    assert {case["question_type"] for case in payload["cases"]} >= {"normal", "unanswerable", "prompt_injection"}
+
+    log_record = json.loads((tmp_path / "ai_testing.jsonl").read_text(encoding="utf-8").strip())
+    assert log_record["event"] == "ai_testing_cases_generated"
+    assert log_record["case_count"] >= 4

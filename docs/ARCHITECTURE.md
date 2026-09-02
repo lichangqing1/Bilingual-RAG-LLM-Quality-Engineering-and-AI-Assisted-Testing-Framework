@@ -1,115 +1,176 @@
 # Architecture
 
+This project has two connected layers:
+
+- **RAG evaluation**: tests the behavior of the bilingual RAG assistant.
+- **AI-assisted testing**: generates structured test assets and quality summaries for the evaluation workflow.
+
+It intentionally avoids large agent frameworks. The project is organized around reproducible test infrastructure: schemas, deterministic evaluation, generated assets, logs, and CI gates.
+
+## System View
+
 ```text
 configs/rag_eval_config.yaml
         |
         v
-Evaluation Dataset Files
-        |-- evaluation_questions.csv
+Evaluation Datasets
         |-- rag_eval_en.csv
         |-- rag_eval_zh.csv
         |-- security_questions.csv
+        |-- challenge_questions.csv
+        |-- evaluation_questions.csv (legacy fallback)
         |
         v
 English + Chinese Markdown Documents
         |
         v
-Document Loader -> Validator
-        |
-        v
-Text Splitter -> Chunks
+Document Loader -> Validator -> Text Splitter
         |
         v
 Retriever Factory
-        |-- lexical: BM25 / TF-IDF only
-        |-- semantic: Sentence-Transformers + FAISS
-        |-- hybrid: lexical + semantic + score fusion
-        |-- local semantic backend for offline regression runs
+        |-- lexical: keyword baseline
+        |-- semantic: local backend or Sentence-Transformers + FAISS
+        |-- hybrid: lexical + semantic score fusion
         |
         v
-Retriever -> Top-K Context Chunks
+SimpleRAGPipeline
+        |-- top-k context retrieval
+        |-- extractive answer generation
+        |-- source citation
+        |-- conservative safety guard
         |
-        v
-Extractive Answer Generator with Safety Guard
-        |
-        +--------------------+
-        |                    |
-        v                    v
-Streamlit Demo        FastAPI Production Endpoints
-                             |
-                             v
-                    JSONL Request Logs
-
-Evaluation Framework
-        |-- context_precision
-        |-- context_recall
-        |-- faithfulness
-        |-- answer_relevancy
-        |-- citation_accuracy
-        |-- faithfulness_failure_hallucination_risk
-        |-- unanswerable_safe
-        |-- security_pass_rate
-        |-- source_match (legacy)
-        |-- keyword_recall
-        |
-        v
-CSV Reports + Failed Case Analysis + Markdown Report + JSONL Evaluation Logs
+        +-------------------+-------------------+
+        |                   |                   |
+        v                   v                   v
+Streamlit Demo        FastAPI Service       Evaluation Scripts
+                            |                   |
+                            v                   v
+                    JSONL Runtime Logs     CSV/Markdown Reports
 ```
 
-## Safety guard logic
+## AI-Assisted Testing View
 
-The pipeline refuses to answer when retrieved evidence is insufficient. The current rule-based guard checks:
+```text
+Requirement / Feature Description
+        |
+        v
+ai_testing.requirement_parser
+        |
+        v
+Pydantic RequirementSpec
+        |
+        v
+ai_testing.scenario_generator
+        |
+        v
+Structured TestScenario objects
+        |
+        v
+ai_testing.test_data_generator
+        |
+        v
+GeneratedTestCase objects
+        |
+        +-> ai_generated_eval_cases.csv
+        +-> generated_pytest_cases.py
+        |
+        v
+RAG Evaluation Results
+        |
+        +-> failure_analyzer.py
+        +-> quality_summary.py
+```
 
-- retrieval similarity below threshold;
-- missing numeric constraints such as `90 days`;
-- high-signal missing terms such as `cryptocurrency` or `international`;
+The important engineering choice is that generated content is validated as structured data before it becomes a reusable test asset.
+
+`RuleBasedGenerator` is the default generator for offline and CI execution. `LLMTestGenerator` is an optional adapter boundary for future requirement-driven generation.
+
+## Retrieval Design
+
+The retriever factory lives in `src/retrieval.py`.
+
+| Mode | Implementation | Role |
+|---|---|---|
+| `lexical` / `keyword` | Lightweight TF-IDF-style retriever | Deterministic baseline and CI fallback |
+| `semantic` | Local semantic backend or FAISS + Sentence-Transformers | Main semantic retrieval path |
+| `hybrid` | Lexical + semantic score fusion | Default mode |
+
+FAISS and Sentence-Transformers are optional and live in `requirements-vector.txt`. This keeps the default `requirements.txt` fast and reliable for CI.
+
+## Evaluation Design
+
+The framework follows an OpenCompass-style separation:
+
+| Layer | Project implementation |
+|---|---|
+| Config | `configs/rag_eval_config.yaml` |
+| Dataset | CSV files under `data/evaluation/` |
+| Inferencer | `src/rag_pipeline.py` |
+| Evaluator | `src/evaluator.py` |
+| Reporter | `src/report_generator.py` |
+| Regression gate | `scripts/run_regression_checks.py` |
+| Challenge suite | `scripts/run_challenge_evaluation.py` |
+
+The evaluator computes deterministic proxies for:
+
+- context precision;
+- context recall;
+- faithfulness;
+- answer relevancy;
+- citation accuracy;
+- faithfulness failure / hallucination risk;
+- unanswerable safe rate;
+- security pass rate.
+
+Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml`, so local checks and CI use the same source of truth.
+
+## Evaluation Suites
+
+| Suite | Dataset | Runner | Purpose |
+|---|---|---|---|
+| Regression | `rag_eval_en.csv`, `rag_eval_zh.csv`, `security_questions.csv` | `scripts/run_evaluation.py` | Known expected RAG behavior |
+| Security | `security_questions.csv` | `scripts/run_security_evaluation.py` | Adversarial and unsafe-request refusal |
+| Challenge | `challenge_questions.csv` | `scripts/run_challenge_evaluation.py` | Robustness and generalization |
+| Generated assets | `test_assets/generated_cases/ai_generated_cases.json` | `tests/test_generated_assets.py` | Requirement-driven generated cases |
+
+Metric details are in [EVALUATION_METRICS.md](EVALUATION_METRICS.md).
+
+## Safety Guard
+
+The RAG pipeline refuses when evidence is weak or the request is unsafe. The guard checks:
+
+- low retrieval score;
+- unsupported numeric constraints such as `90 days`;
+- high-signal absent terms such as `cryptocurrency` and `international`;
 - Chinese unsupported terms such as `加密货币` and `国际配送`;
-- prompt injection, jailbreak, system prompt leakage, sensitive-data requests, retrieval poisoning, and unsafe bypass instructions;
-- low question-evidence keyword coverage.
+- prompt injection, jailbreak, system-prompt leakage, sensitive data, retrieval poisoning, and unsafe bypass requests;
+- weak overlap between the question and retrieved evidence.
 
-This design is intentionally conservative because the project focuses on AI testing and RAG evaluation rather than maximum answer generation.
+Security details are in [SECURITY_EVALUATION.md](SECURITY_EVALUATION.md).
 
-## Bilingual evaluation design
-
-The evaluation set includes English and Chinese rows for:
-
-- answerable policy questions;
-- unanswerable or unsupported questions;
-- prompt-injection and policy-override security questions;
-- source-match checks;
-- keyword-recall checks;
-- retrieved-context keyword checks;
-- source-grounding and hallucination-risk checks.
-
-The main production semantic retriever uses Sentence-Transformers embeddings with FAISS vector search. Those vector dependencies live in `requirements-vector.txt` so the default `requirements.txt` remains lightweight for CI and simple local setup. A lightweight lexical retriever is retained as a deterministic baseline and CI-friendly fallback. The default hybrid retriever combines lexical scoring with a local semantic backend for repeatable offline tests, while `semantic_backend=faiss` enables production-style semantic retrieval and hybrid fusion after installing the optional vector dependencies.
-
-## OpenCompass-style evaluation mapping
-
-The project is organized like a compact RAG benchmark:
-
-- **Config**: `configs/rag_eval_config.yaml` declares dataset files, task types, metrics, outputs, and quality gates.
-- **Dataset**: `scripts/run_evaluation.py` loads the benchmark-style shards declared in config: `rag_eval_en.csv`, `rag_eval_zh.csv`, and `security_questions.csv`. `evaluation_questions.csv` remains as a legacy combined fallback.
-- **Inferencer**: `SimpleRAGPipeline` retrieves top-k chunks with the configured retrieval mode: lexical, semantic, or hybrid.
-- **Evaluator**: `src/evaluator.py` computes context precision, context recall, faithfulness, answer relevancy, citation accuracy, faithfulness failure / hallucination risk, safety, and backward-compatible legacy metric aliases.
-- **Reporter**: `src/report_generator.py` creates Markdown reports, failed-case diagnostics, Chinese failed-case analysis, and summary CSV files.
-- **Logs**: API requests and evaluation runs are written as JSONL for auditability.
-
-## API and logging
+## API and Logging
 
 `api.py` exposes:
 
-- `GET /health`
-- `POST /ask`
-- `POST /evaluate`
-- `POST /feedback`
-- `GET /metrics`
-- `GET /logs/summary`
+```text
+GET  /health
+POST /ask
+POST /evaluate
+POST /feedback
+GET  /metrics
+GET  /logs/summary
+POST /testing/generate
+```
 
-Each `/ask` request logs question, top-k setting, answer, sources, and latency to `logs/api_requests.jsonl`.
-Each `/evaluate` request logs row-level evaluation metrics to `logs/api_evaluations.jsonl`.
-Each `/feedback` request logs user feedback to `logs/feedback.jsonl`.
+Runtime logs are JSONL files under `logs/`:
 
-Running `scripts/run_evaluation.py` logs each evaluation run to `logs/evaluation_runs.jsonl` and failed cases to `logs/evaluation_failed_cases.jsonl`.
+| Log | Source |
+|---|---|
+| `api_requests.jsonl` | `/ask` |
+| `api_evaluations.jsonl` | `/evaluate` |
+| `feedback.jsonl` | `/feedback` |
+| `ai_testing.jsonl` | `/testing/generate` |
+| `evaluation_runs.jsonl` | `scripts/run_evaluation.py` |
+| `evaluation_failed_cases.jsonl` | failed-case logging |
 
-`GET /metrics` returns evaluation summary metrics plus per-log line counts.
-`GET /logs/summary` returns a compact summary for each JSONL log file, including existence, line count, last timestamp, and last event.
+`GET /metrics` returns summary metrics plus log counts. `GET /logs/summary` returns file-level log health, line counts, and last events.

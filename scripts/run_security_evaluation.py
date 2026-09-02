@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.document_loader import load_markdown_documents, validate_documents
-from src.evaluator import add_pass_fail_flags, evaluate_dataset, is_security_case
+from src.evaluation.evaluator import add_pass_fail_flags, evaluate_dataset, is_security_case
 from src.logging_utils import append_jsonl
 from src.rag_pipeline import SimpleRAGPipeline
 from src.retrieval import build_vector_store

@@ -34,5 +34,11 @@ jobs:
       - name: Run security evaluation
         run: python scripts/run_security_evaluation.py
 
+      - name: Run AI-assisted testing workflow
+        run: python scripts/run_ai_testing_workflow.py
+
+      - name: Run challenge evaluation
+        run: python scripts/run_challenge_evaluation.py
+
       - name: Run regression gates
         run: python scripts/run_regression_checks.py

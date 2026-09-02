@@ -1,5 +1,5 @@
 import pandas as pd
-from src.evaluator import keyword_recall, source_match, answerability_check, add_pass_fail_flags, identify_failed_cases
+from src.evaluation.evaluator import keyword_recall, source_match, answerability_check, add_pass_fail_flags, identify_failed_cases
 
 
 def test_keyword_recall_full_match():

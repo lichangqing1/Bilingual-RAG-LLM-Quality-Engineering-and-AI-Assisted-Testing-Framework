@@ -210,9 +210,9 @@ def hallucination_risk(answer: object, retrieved_context: object, question_type:
     return 1 - groundedness
 
 
-def ragas_context_precision(retrieved_sources: Iterable[str], expected_source: object) -> Optional[float]:
+def proxy_context_precision(retrieved_sources: Iterable[str], expected_source: object) -> Optional[float]:
     """
-    RAGAS-style context precision proxy.
+    Deterministic context precision proxy.
 
     It measures whether the expected source appears early in the retrieved
     source list. A match at rank 1 scores 1.0; lower-rank matches score lower.
@@ -227,9 +227,9 @@ def ragas_context_precision(retrieved_sources: Iterable[str], expected_source: o
     return 0.0
 
 
-def ragas_context_recall(retrieved_context: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
+def proxy_context_recall(retrieved_context: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
     """
-    RAGAS-style context recall proxy.
+    Deterministic context recall proxy.
 
     It checks how much expected answer evidence is present in retrieved context.
     For unanswerable cases, context recall is skipped because the correct
@@ -240,14 +240,14 @@ def ragas_context_recall(retrieved_context: object, expected_keywords: object, q
     return context_keyword_recall(retrieved_context, expected_keywords)
 
 
-def ragas_faithfulness(answer: object, retrieved_context: object, question_type: object = "normal") -> Optional[float]:
-    """RAGAS-style faithfulness proxy based on answer groundedness."""
+def proxy_faithfulness(answer: object, retrieved_context: object, question_type: object = "normal") -> Optional[float]:
+    """Deterministic faithfulness proxy based on answer groundedness."""
     return answer_groundedness(answer, retrieved_context, question_type)
 
 
-def ragas_answer_relevancy(answer: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
+def proxy_answer_relevancy(answer: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
     """
-    RAGAS-style answer relevancy proxy.
+    Deterministic answer relevancy proxy.
 
     For answerable questions, keyword recall is used as a deterministic proxy
     for whether the answer addresses the expected information need. For
@@ -256,6 +256,26 @@ def ragas_answer_relevancy(answer: object, expected_keywords: object, question_t
     if is_safety_case(question_type):
         return None
     return keyword_recall(answer, expected_keywords)
+
+
+def ragas_context_precision(retrieved_sources: Iterable[str], expected_source: object) -> Optional[float]:
+    """Backward-compatible alias for proxy_context_precision."""
+    return proxy_context_precision(retrieved_sources, expected_source)
+
+
+def ragas_context_recall(retrieved_context: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
+    """Backward-compatible alias for proxy_context_recall."""
+    return proxy_context_recall(retrieved_context, expected_keywords, question_type)
+
+
+def ragas_faithfulness(answer: object, retrieved_context: object, question_type: object = "normal") -> Optional[float]:
+    """Backward-compatible alias for proxy_faithfulness."""
+    return proxy_faithfulness(answer, retrieved_context, question_type)
+
+
+def ragas_answer_relevancy(answer: object, expected_keywords: object, question_type: object = "normal") -> Optional[float]:
+    """Backward-compatible alias for proxy_answer_relevancy."""
+    return proxy_answer_relevancy(answer, expected_keywords, question_type)
 
 
 def evaluate_single_case(result: Dict[str, object], expected_row: pd.Series) -> Dict[str, object]:
@@ -267,10 +287,10 @@ def evaluate_single_case(result: Dict[str, object], expected_row: pd.Series) -> 
     expected_source = expected_row.get("expected_source", None)
     question_type = expected_row.get("question_type", "normal")
     safety_case = is_safety_case(question_type)
-    ragas_precision = ragas_context_precision(retrieved_sources, expected_source)
-    ragas_recall = ragas_context_recall(retrieved_context, expected_keywords, question_type)
-    ragas_faith = ragas_faithfulness(answer, retrieved_context, question_type)
-    ragas_relevancy = ragas_answer_relevancy(answer, expected_keywords, question_type)
+    proxy_precision = proxy_context_precision(retrieved_sources, expected_source)
+    proxy_recall = proxy_context_recall(retrieved_context, expected_keywords, question_type)
+    proxy_faith = proxy_faithfulness(answer, retrieved_context, question_type)
+    proxy_relevancy = proxy_answer_relevancy(answer, expected_keywords, question_type)
     legacy_context_recall = None if safety_case else context_keyword_recall(retrieved_context, expected_keywords)
     legacy_groundedness = answer_groundedness(answer, retrieved_context, question_type)
     legacy_hallucination_risk = hallucination_risk(answer, retrieved_context, question_type)
@@ -288,16 +308,20 @@ def evaluate_single_case(result: Dict[str, object], expected_row: pd.Series) -> 
         "context_keyword_recall": legacy_context_recall,
         "answer_groundedness": legacy_groundedness,
         "hallucination_risk": legacy_hallucination_risk,
-        "context_precision": ragas_precision,
-        "context_recall": ragas_recall,
-        "faithfulness": ragas_faith,
-        "answer_relevancy": ragas_relevancy,
+        "context_precision": proxy_precision,
+        "context_recall": proxy_recall,
+        "faithfulness": proxy_faith,
+        "answer_relevancy": proxy_relevancy,
         "faithfulness_failure_hallucination_risk": legacy_hallucination_risk,
         "citation_accuracy": citation_score,
-        "ragas_context_precision": ragas_precision,
-        "ragas_context_recall": ragas_recall,
-        "ragas_faithfulness": ragas_faith,
-        "ragas_answer_relevancy": ragas_relevancy,
+        "proxy_context_precision": proxy_precision,
+        "proxy_context_recall": proxy_recall,
+        "proxy_faithfulness": proxy_faith,
+        "proxy_answer_relevancy": proxy_relevancy,
+        "ragas_context_precision": proxy_precision,
+        "ragas_context_recall": proxy_recall,
+        "ragas_faithfulness": proxy_faith,
+        "ragas_answer_relevancy": proxy_relevancy,
         "source_citation": answer_has_source_citation(answer),
         "matched_keywords": "" if safety_case else ";".join(matched_keywords(answer, expected_keywords)),
         "missing_keywords": "" if safety_case else ";".join(missing_keywords(answer, expected_keywords)),
@@ -346,6 +370,10 @@ def add_pass_fail_flags(
         "context_recall",
         "faithfulness",
         "answer_relevancy",
+        "proxy_context_precision",
+        "proxy_context_recall",
+        "proxy_faithfulness",
+        "proxy_answer_relevancy",
         "ragas_context_precision",
         "ragas_context_recall",
         "ragas_faithfulness",
@@ -370,6 +398,10 @@ def add_pass_fail_flags(
             "context_recall_pass",
             "faithfulness_pass",
             "answer_relevancy_pass",
+            "proxy_context_precision_pass",
+            "proxy_context_recall_pass",
+            "proxy_faithfulness_pass",
+            "proxy_answer_relevancy_pass",
             "ragas_context_precision_pass",
             "ragas_context_recall_pass",
             "ragas_faithfulness_pass",
@@ -410,6 +442,10 @@ def summarize_results(evaluation_results: pd.DataFrame) -> pd.DataFrame:
         "avg_answer_relevancy": df.get("answer_relevancy", pd.Series(dtype=float)).mean(skipna=True),
         "avg_faithfulness_failure_hallucination_risk": df.get("faithfulness_failure_hallucination_risk", pd.Series(dtype=float)).mean(skipna=True),
         "avg_citation_accuracy": df.get("citation_accuracy", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_proxy_context_precision": df.get("proxy_context_precision", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_proxy_context_recall": df.get("proxy_context_recall", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_proxy_faithfulness": df.get("proxy_faithfulness", pd.Series(dtype=float)).mean(skipna=True),
+        "avg_proxy_answer_relevancy": df.get("proxy_answer_relevancy", pd.Series(dtype=float)).mean(skipna=True),
         "avg_ragas_context_precision": df.get("ragas_context_precision", pd.Series(dtype=float)).mean(skipna=True),
         "avg_ragas_context_recall": df.get("ragas_context_recall", pd.Series(dtype=float)).mean(skipna=True),
         "avg_ragas_faithfulness": df.get("ragas_faithfulness", pd.Series(dtype=float)).mean(skipna=True),
@@ -453,10 +489,10 @@ def failure_detail(row: pd.Series) -> str:
         ("context_recall_pass", "context_recall", "context recall was too low"),
         ("faithfulness_pass", "faithfulness", "faithfulness was too low"),
         ("answer_relevancy_pass", "answer_relevancy", "answer relevancy was too low"),
-        ("ragas_context_precision_pass", "ragas_context_precision", "RAGAS-style context precision was too low"),
-        ("ragas_context_recall_pass", "ragas_context_recall", "RAGAS-style context recall was too low"),
-        ("ragas_faithfulness_pass", "ragas_faithfulness", "RAGAS-style faithfulness was too low"),
-        ("ragas_answer_relevancy_pass", "ragas_answer_relevancy", "RAGAS-style answer relevancy was too low"),
+        ("proxy_context_precision_pass", "proxy_context_precision", "proxy context precision was too low"),
+        ("proxy_context_recall_pass", "proxy_context_recall", "proxy context recall was too low"),
+        ("proxy_faithfulness_pass", "proxy_faithfulness", "proxy faithfulness was too low"),
+        ("proxy_answer_relevancy_pass", "proxy_answer_relevancy", "proxy answer relevancy was too low"),
         ("unanswerable_pass", "unanswerable_safe", "unanswerable question was not safely refused"),
     ]
     for pass_col, metric_col, message in checks:

@@ -1,0 +1,8 @@
+{
+  "total_cases": 4,
+  "passed_cases": 4,
+  "failed_cases": 0,
+  "pass_rate": 1.0,
+  "failure_category_counts": {},
+  "summary": "All 4 prepared cases passed. The current run shows no regression across retrieval, grounding, citation, refusal, or safety checks."
+}

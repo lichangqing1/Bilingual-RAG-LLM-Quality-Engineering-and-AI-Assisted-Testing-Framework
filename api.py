@@ -14,8 +14,12 @@ PROJECT_PATH = Path(__file__).resolve().parent
 if str(PROJECT_PATH) not in sys.path:
     sys.path.insert(0, str(PROJECT_PATH))
 
+from ai_testing.requirement_parser import parse_requirement
+from ai_testing.generators import RuleBasedGenerator
+from ai_testing.schemas import model_to_dict
+from ai_testing.test_data_generator import generate_test_cases
 from src.document_loader import load_markdown_documents, validate_documents
-from src.evaluator import (
+from src.evaluation.evaluator import (
     add_pass_fail_flags,
     evaluate_single_case,
 )
@@ -72,12 +76,26 @@ class FeedbackResponse(BaseModel):
     log_path: str
 
 
+class TestingGenerateRequest(BaseModel):
+    requirement_text: str = Field(..., min_length=1)
+    requirement_id: str = "RAG-AI-001"
+
+
+class TestingGenerateResponse(BaseModel):
+    requirement: Dict[str, Any]
+    scenarios: List[Dict[str, Any]]
+    cases: List[Dict[str, Any]]
+
+
 LOG_FILES = {
     "api_requests": "api_requests.jsonl",
     "api_evaluations": "api_evaluations.jsonl",
     "feedback": "feedback.jsonl",
     "evaluation_runs": "evaluation_runs.jsonl",
     "evaluation_failed_cases": "evaluation_failed_cases.jsonl",
+    "security_evaluation_runs": "security_evaluation_runs.jsonl",
+    "challenge_evaluation_runs": "challenge_evaluation_runs.jsonl",
+    "ai_testing": "ai_testing.jsonl",
 }
 LOG_DIR = PROJECT_PATH / "logs"
 LOG_PATH_OVERRIDES: Dict[str, Path] = {}
@@ -293,6 +311,32 @@ def feedback(request: FeedbackRequest) -> FeedbackResponse:
         },
     )
     return FeedbackResponse(status="logged", log_path=log_path)
+
+
+@app.post("/testing/generate", response_model=TestingGenerateResponse)
+def testing_generate(request: TestingGenerateRequest) -> TestingGenerateResponse:
+    requirement = parse_requirement(
+        request.requirement_text,
+        requirement_id=request.requirement_id,
+    )
+    scenarios = RuleBasedGenerator().generate(requirement)
+    cases = generate_test_cases(scenarios)
+    response = TestingGenerateResponse(
+        requirement=model_to_dict(requirement),
+        scenarios=[model_to_dict(scenario) for scenario in scenarios],
+        cases=[model_to_dict(case) for case in cases],
+    )
+    write_log(
+        "ai_testing",
+        {
+            "event": "ai_testing_cases_generated",
+            "requirement_id": requirement.requirement_id,
+            "scenario_count": len(scenarios),
+            "case_count": len(cases),
+            "tags": requirement.tags,
+        },
+    )
+    return response
 
 
 @app.get("/metrics")

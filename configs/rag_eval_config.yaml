@@ -8,6 +8,7 @@ dataset:
     english: data/evaluation/rag_eval_en.csv
     chinese: data/evaluation/rag_eval_zh.csv
     security: data/evaluation/security_questions.csv
+    challenge: data/evaluation/challenge_questions.csv
   task_types:
     - answerable_qa
     - unanswerable_qa
@@ -19,6 +20,7 @@ dataset:
     - retrieval_poisoning
     - unsafe_instruction_refusal
     - source_grounding
+    - challenge_robustness
 
 retrieval:
   mode: hybrid
@@ -29,6 +31,17 @@ retrieval:
   semantic_model: sentence-transformers/all-MiniLM-L6-v2
   top_k: 3
   min_similarity_score: 0.25
+
+ai_testing:
+  enabled: true
+  requirement_parser: deterministic
+  scenario_generator: schema_validated
+  test_data_generator: evaluation_csv
+  pytest_generation: template_based
+  failure_analysis: rule_based_rca
+  quality_summary: metric_grounded_narrative
+  sample_requirement: test_assets/requirements/sample_rag_requirement.md
+  generated_assets_dir: test_assets/generated_cases
 
 metrics:
   - retrieval_relevance
@@ -48,14 +61,18 @@ outputs:
   evaluation_results: results/evaluation_results.csv
   failed_cases: results/failed_cases.csv
   summary_report: results/summary_report.csv
+  challenge_results: results/challenge_evaluation_results.csv
+  challenge_summary: results/challenge_summary.csv
   markdown_report: results/evaluation_report.md
   logs_dir: logs
 
-gates:
-  min_context_precision: 0.75
-  min_context_recall: 0.75
-  min_faithfulness: 0.80
-  min_answer_relevancy: 0.60
-  min_unanswerable_safe_rate: 1.00
-  max_hallucination_risk: 0.20
-  min_overall_pass_rate: 0.90
+quality_gates:
+  overall_pass_rate: 0.90
+  avg_source_match: 0.75
+  avg_keyword_recall: 0.60
+  avg_unanswerable_safe: 0.80
+  avg_context_precision: 0.75
+  avg_context_recall: 0.75
+  avg_faithfulness: 0.80
+  avg_answer_relevancy: 0.60
+  max_avg_faithfulness_failure_hallucination_risk: 0.20

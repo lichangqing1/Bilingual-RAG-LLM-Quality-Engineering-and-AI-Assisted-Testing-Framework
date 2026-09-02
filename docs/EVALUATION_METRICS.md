@@ -1,6 +1,11 @@
 # Evaluation Metrics
 
-This project reports RAG evaluation metrics with industry-facing names while keeping a few legacy column aliases for backward compatibility.
+This project reports deterministic RAG evaluation proxies with industry-facing names while keeping a few legacy column aliases for backward compatibility.
+
+The metrics are used by two workflows:
+
+- the RAG evaluation scripts, which score the current assistant behavior;
+- the AI-assisted testing workflow, which turns generated test assets and failed cases into structured quality summaries.
 
 ## Evaluation Layer
 
@@ -11,6 +16,7 @@ The framework uses a compact evaluator design inspired by benchmark systems such
 - **Evaluator**: `src/evaluator.py` computes retrieval, faithfulness, citation, hallucination-risk, and safety metrics.
 - **Reporter**: `src/report_generator.py` writes CSV and Markdown reports under `results/`.
 - **Regression gate**: `scripts/run_regression_checks.py` checks minimum quality thresholds.
+- **AI-assisted testing**: `ai_testing/quality_summary.py` and `ai_testing/failure_analyzer.py` reuse deterministic metric outputs for release summaries and RCA suggestions.
 
 Future adapters for tools such as RAGAS, DeepEval, or OpenCompass can be added without changing the current deterministic evaluator.
 
@@ -18,12 +24,13 @@ Future adapters for tools such as RAGAS, DeepEval, or OpenCompass can be added w
 
 | Earlier idea / legacy column | Industry-facing name |
 |---|---|
-| `answer_groundedness` | `faithfulness` |
-| `context_keyword_recall` | `context_recall` |
+| `answer_groundedness` | `faithfulness` / `proxy_faithfulness` |
+| `context_keyword_recall` | `context_recall` / `proxy_context_recall` |
 | retrieved context quality | `context_precision` |
-| answer relevance | `answer_relevancy` |
+| answer relevance | `answer_relevancy` / `proxy_answer_relevancy` |
 | `hallucination_risk` | `faithfulness_failure_hallucination_risk` |
 | `source_citation` | `citation_accuracy` |
+| `ragas_*` columns | legacy aliases for deterministic `proxy_*` columns |
 
 ## `faithfulness`
 
@@ -120,6 +127,19 @@ Measures whether the answer addresses the expected information need.
 For answerable cases, the evaluator uses expected keyword coverage in the answer as a deterministic answer-relevancy proxy. Unanswerable cases are handled separately by `unanswerable_safe`.
 
 Legacy alias: `ragas_answer_relevancy`.
+
+## Proxy Metric Naming
+
+The preferred internal names are:
+
+```text
+proxy_context_precision
+proxy_context_recall
+proxy_faithfulness
+proxy_answer_relevancy
+```
+
+Older `ragas_*` columns are still emitted as compatibility aliases, but the project does not claim to call the external RAGAS package in the default evaluator.
 
 **Example pass case**
 
@@ -250,3 +270,24 @@ Each row gets pass/fail flags for applicable metrics. `overall_pass` is `1` only
 **Limitation**
 
 The aggregate score is only as strong as the evaluation dataset. Add more representative questions when expanding the knowledge base.
+
+## How Metrics Feed AI-Assisted Testing
+
+The AI-assisted testing layer does not invent metric values. Python computes the numbers first, then the testing layer summarizes and classifies the results.
+
+```text
+evaluation_results.csv -> add_pass_fail_flags -> failed_cases -> failure_analyzer
+summary_report.csv     -> quality_summary
+```
+
+This keeps the workflow reliable:
+
+- code calculates pass/fail decisions;
+- structured schemas validate generated test assets;
+- generated summaries explain results without changing the underlying measurements.
+
+## Quality Gates
+
+Regression thresholds are configured in `configs/rag_eval_config.yaml` under `quality_gates`.
+
+`scripts/run_regression_checks.py` reads those values at runtime, which keeps local validation and CI aligned.
