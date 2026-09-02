@@ -67,9 +67,10 @@ def generate_test_scenarios(requirement: RequirementSpec) -> List[TestScenario]:
     """
     Generate structured test scenarios from a parsed requirement.
 
-    This deterministic implementation stands in for an LLM-backed generator.
-    It keeps the important testing pattern: generated ideas are validated by
-    schema before they become reusable test assets.
+    This deterministic implementation is a customer-support-domain baseline
+    for CI and local regression. It keeps the important testing pattern:
+    generated ideas are validated by schema before they become reusable test
+    assets.
     """
     description = requirement.description.lower()
     scenarios: List[TestScenario] = []

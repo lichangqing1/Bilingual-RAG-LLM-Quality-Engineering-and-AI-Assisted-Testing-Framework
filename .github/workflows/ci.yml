@@ -37,6 +37,9 @@ jobs:
       - name: Run AI-assisted testing workflow
         run: python scripts/run_ai_testing_workflow.py
 
+      - name: Run generated asset tests
+        run: pytest tests/test_generated_assets.py -q
+
       - name: Run challenge evaluation
         run: python scripts/run_challenge_evaluation.py
 

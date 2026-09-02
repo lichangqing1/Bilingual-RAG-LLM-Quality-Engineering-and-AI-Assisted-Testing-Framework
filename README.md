@@ -46,6 +46,12 @@ The project evaluates an English/Chinese customer-support RAG assistant for retr
 | LLM integration | Optional OpenAI-compatible JSON client for LLM-generated test scenarios; default repo does not require an API key |
 | Evaluation scope | Application-level RAG/LLM quality engineering, not foundation-model training or public model benchmarking |
 
+Suggested GitHub About description:
+
+```text
+Bilingual RAG/LLM quality engineering framework with AI-assisted test generation, security checks, challenge evaluation, pytest regression, FastAPI, Streamlit, and CI quality gates.
+```
+
 ## Architecture
 
 ```text
@@ -325,12 +331,12 @@ python scripts/run_regression_checks.py
 
 ![Regression checks](docs/screenshots/regression_checks.png)
 
-GitHub Actions installs `requirements.txt`, runs pytest, regenerates evaluation results, runs the security suite, runs the AI-assisted testing workflow, runs the challenge suite, and then checks regression gates. Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml` with `yaml.safe_load()` when PyYAML is installed.
+GitHub Actions installs `requirements.txt`, runs pytest, regenerates evaluation results, runs the security suite, runs the AI-assisted testing workflow, reruns the generated asset pytest cases, runs the challenge suite, and then checks regression gates. Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml` with `yaml.safe_load()` when PyYAML is installed.
 
 ## Project Structure
 
 ```text
-rag-evaluation-framework/
+Bilingual-RAG-LLM-Quality-Engineering-and-AI-Assisted-Testing-Framework/
 ├── .github/workflows/ci.yml
 ├── ai_testing/
 ├── configs/rag_eval_config.yaml
