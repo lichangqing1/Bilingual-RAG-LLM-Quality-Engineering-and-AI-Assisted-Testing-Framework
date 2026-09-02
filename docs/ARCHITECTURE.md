@@ -97,6 +97,8 @@ The retriever factory lives in `src/retrieval.py`.
 
 FAISS and Sentence-Transformers are optional and live in `requirements-vector.txt`. This keeps the default `requirements.txt` fast and reliable for CI.
 
+Legacy modules `src/vector_store.py` and `src/tfidf_vector_store.py` are retained only for backward-compatible examples and notebooks. New code should use `src/retrieval.py` and the retrievers under `src/retrievers/`.
+
 ## Evaluation Design
 
 The framework follows an OpenCompass-style separation:
@@ -122,7 +124,7 @@ The evaluator computes deterministic proxies for:
 - unanswerable safe rate;
 - security pass rate.
 
-Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml`, so local checks and CI use the same source of truth.
+Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml`, so local checks and CI use the same source of truth. The regression script uses `yaml.safe_load()` when PyYAML is installed and retains a minimal fallback parser for lightweight environments.
 
 ## Evaluation Suites
 

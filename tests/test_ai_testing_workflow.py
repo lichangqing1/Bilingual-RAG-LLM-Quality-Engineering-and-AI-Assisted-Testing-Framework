@@ -5,7 +5,7 @@ import pandas as pd
 from ai_testing.case_generator import build_pytest_code, save_cases_csv, save_scenarios
 from ai_testing.failure_analyzer import analyze_failed_cases
 from ai_testing.generators import LLMTestGenerator, RuleBasedGenerator
-from ai_testing.llm_client import build_requirement_generation_prompt
+from ai_testing.llm_client import OpenAICompatibleJSONClient, build_requirement_generation_prompt
 from ai_testing.quality_summary import build_quality_summary
 from ai_testing.requirement_parser import parse_requirement
 from ai_testing.scenario_generator import generate_test_scenarios
@@ -72,6 +72,32 @@ def test_generator_backends_are_schema_validated():
 
     assert llm_generated[0].requirement_id == "REQ-GEN-001"
     assert "Requirement ID: REQ-GEN-001" in build_requirement_generation_prompt(requirement)
+
+
+def test_llm_generator_requires_configured_client():
+    requirement = parse_requirement("RAG answers should be grounded.", requirement_id="REQ-GEN-002")
+
+    try:
+        LLMTestGenerator().generate(requirement)
+    except RuntimeError as exc:
+        assert "--generator rule_based" in str(exc)
+        assert "LLM client" in str(exc)
+    else:
+        raise AssertionError("LLMTestGenerator should fail clearly when no client is configured.")
+
+
+def test_openai_compatible_client_reads_environment(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    monkeypatch.setenv("LLM_API_BASE", "https://example.test/v1")
+    monkeypatch.setenv("LLM_TIMEOUT", "7")
+
+    client = OpenAICompatibleJSONClient.from_env()
+
+    assert client.api_key == "test-key"
+    assert client.model == "test-model"
+    assert client.api_base == "https://example.test/v1"
+    assert client.timeout == 7
 
 
 def test_generated_pytest_code_uses_template_not_freeform_python():

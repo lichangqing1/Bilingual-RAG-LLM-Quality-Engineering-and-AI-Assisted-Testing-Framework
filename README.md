@@ -1,6 +1,6 @@
 # Bilingual RAG Evaluation and AI-Assisted Testing Framework
 
-A compact RAG/LLM quality engineering project that combines two capabilities:
+A compact RAG/LLM Quality Engineering and AI-Assisted Testing project that combines two capabilities:
 
 ```text
                 RAG / LLM QUALITY ENGINEERING
@@ -42,8 +42,8 @@ The project evaluates an English/Chinese customer-support RAG assistant for retr
 | Scope | Status |
 |---|---|
 | Deterministic mode | Reproducible offline regression and CI validation |
-| AI-assisted testing mode | Requirement-driven test generation with schema validation and deterministic fallback |
-| LLM integration | Optional generator interface is prepared; default repo does not require an API key |
+| AI-assisted testing mode | Requirement-driven test generation with schema validation and deterministic default execution |
+| LLM integration | Optional OpenAI-compatible JSON client for LLM-generated test scenarios; default repo does not require an API key |
 | Evaluation scope | Application-level RAG/LLM quality engineering, not foundation-model training or public model benchmarking |
 
 ## Architecture
@@ -206,7 +206,24 @@ test_assets/generated_cases/quality_summary.json
 test_assets/generated_cases/failure_analysis.json
 ```
 
-Generated assets are executed by stable pytest code in `tests/test_generated_assets.py`. The current `RuleBasedGenerator` is deterministic and offline-friendly for CI; `LLMTestGenerator` provides the extension point for future LLM-backed requirement interpretation.
+Generated assets are executed by stable pytest code in `tests/test_generated_assets.py`. The current `RuleBasedGenerator` is deterministic and offline-friendly for CI. `LLMTestGenerator` uses an optional OpenAI-compatible JSON client and fails clearly if `--generator llm` is requested without an API key, so LLM-backed generation is explicit rather than an invisible fallback.
+
+Optional LLM-backed generation:
+
+```bash
+export LLM_API_KEY="your_api_key"
+export LLM_MODEL="gpt-4o-mini"
+python scripts/run_ai_testing_workflow.py --generator llm
+```
+
+Supported environment variables:
+
+```text
+LLM_API_KEY or OPENAI_API_KEY
+LLM_MODEL
+LLM_API_BASE
+LLM_TIMEOUT
+```
 
 ## Challenge Suite
 
@@ -306,7 +323,7 @@ python scripts/run_regression_checks.py
 
 ![Regression checks](docs/screenshots/regression_checks.png)
 
-GitHub Actions installs `requirements.txt`, runs pytest, regenerates evaluation results, runs the security suite, runs the AI-assisted testing workflow, runs the challenge suite, and then checks regression gates. Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml`.
+GitHub Actions installs `requirements.txt`, runs pytest, regenerates evaluation results, runs the security suite, runs the AI-assisted testing workflow, runs the challenge suite, and then checks regression gates. Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml` with `yaml.safe_load()` when PyYAML is installed.
 
 ## Project Structure
 

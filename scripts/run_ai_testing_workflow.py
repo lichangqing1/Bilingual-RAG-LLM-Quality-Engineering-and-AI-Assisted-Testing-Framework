@@ -17,6 +17,7 @@ from ai_testing.case_generator import save_cases_csv, save_cases_json, save_pyte
 from ai_testing.executor import execute_generated_cases
 from ai_testing.failure_analyzer import analyze_failed_cases
 from ai_testing.generators import LLMTestGenerator, RuleBasedGenerator
+from ai_testing.llm_client import OpenAICompatibleJSONClient
 from ai_testing.quality_summary import build_quality_summary
 from ai_testing.requirement_parser import parse_requirement
 from ai_testing.schemas import model_to_dict
@@ -59,7 +60,10 @@ def main() -> None:
     requirement_path = Path(args.requirement_file)
     requirement_text = requirement_path.read_text(encoding="utf-8")
     requirement = parse_requirement(requirement_text, requirement_id=args.requirement_id)
-    generator = LLMTestGenerator() if args.generator == "llm" else RuleBasedGenerator()
+    if args.generator == "llm":
+        generator = LLMTestGenerator(client=OpenAICompatibleJSONClient.from_env())
+    else:
+        generator = RuleBasedGenerator()
     scenarios = generator.generate(requirement)
     cases = generate_test_cases(scenarios)
 

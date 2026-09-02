@@ -54,7 +54,7 @@ Generated content is treated as data before it is trusted.
 AI-style generation -> Pydantic schema validation -> saved test asset -> deterministic execution
 ```
 
-The current implementation is deterministic and offline-friendly, which keeps local runs and CI stable. A real LLM client can be added later behind the same schema layer without changing the downstream evaluator.
+The default implementation is deterministic and offline-friendly, which keeps local runs and CI stable. An optional OpenAI-compatible JSON client is available for LLM-backed scenario generation, but it must be requested explicitly.
 
 ## Generator Backends
 
@@ -63,7 +63,8 @@ The generator interface separates deterministic CI behavior from optional LLM-ba
 | Backend | File | Purpose |
 |---|---|---|
 | `RuleBasedGenerator` | `ai_testing/generators.py` | Offline, deterministic generation for CI and unit tests |
-| `LLMTestGenerator` | `ai_testing/generators.py` | Optional adapter for a future LLM client |
+| `LLMTestGenerator` | `ai_testing/generators.py` | Optional adapter for LLM-backed requirement interpretation |
+| `OpenAICompatibleJSONClient` | `ai_testing/llm_client.py` | Minimal dependency-free chat-completions client for JSON-only generation |
 
 The optional LLM backend is deliberately narrow. It should be used for:
 
@@ -71,6 +72,22 @@ The optional LLM backend is deliberately narrow. It should be used for:
 - failed-case explanation or RCA enrichment.
 
 The RAG evaluation stack itself remains framework-light and deterministic by default.
+
+Run deterministic generation:
+
+```bash
+python scripts/run_ai_testing_workflow.py --generator rule_based
+```
+
+Run optional LLM-backed generation:
+
+```bash
+export LLM_API_KEY="your_api_key"
+export LLM_MODEL="gpt-4o-mini"
+python scripts/run_ai_testing_workflow.py --generator llm
+```
+
+If `--generator llm` is used without `LLM_API_KEY` or `OPENAI_API_KEY`, the script raises a clear configuration error instead of silently falling back to deterministic generation.
 
 ## Modules
 

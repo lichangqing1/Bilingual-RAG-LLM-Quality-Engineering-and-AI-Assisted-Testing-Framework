@@ -36,7 +36,10 @@ class LLMTestGenerator:
 
     def generate(self, requirement: RequirementSpec) -> list[TestScenario]:
         if self.client is None:
-            return self.fallback.generate(requirement)
+            raise RuntimeError(
+                "LLM generator requested but no LLM client is configured. "
+                "Use --generator rule_based for offline execution or configure an LLM client."
+            )
         if hasattr(self.client, "generate_scenarios"):
             payload = self.client.generate_scenarios(requirement)
         else:

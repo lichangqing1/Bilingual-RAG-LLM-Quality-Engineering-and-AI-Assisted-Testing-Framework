@@ -11,6 +11,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+try:
+    import yaml
+except ImportError:  # pragma: no cover - fallback keeps lightweight local envs working.
+    yaml = None
+
 
 def print_header(title: str) -> None:
     """Print a readable CLI section header."""
@@ -34,7 +39,7 @@ def print_gate_row(metric: str, value: float, threshold: float, passed: bool) ->
 
 
 def load_quality_gates(config_path: Path = PROJECT_ROOT / "configs" / "rag_eval_config.yaml") -> dict[str, float]:
-    """Load quality gates from the project config without adding a YAML parser."""
+    """Load quality gates from the project config."""
     defaults = {
         "overall_pass_rate": 0.90,
         "avg_source_match": 0.75,
@@ -48,6 +53,14 @@ def load_quality_gates(config_path: Path = PROJECT_ROOT / "configs" / "rag_eval_
     }
     if not config_path.exists():
         return defaults
+
+    if yaml is not None:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        configured = config.get("quality_gates", {})
+        return {
+            **defaults,
+            **{key: float(value) for key, value in configured.items()},
+        }
 
     gates = defaults.copy()
     in_quality_gates = False
