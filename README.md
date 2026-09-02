@@ -1,50 +1,24 @@
 # Bilingual RAG Evaluation and AI-Assisted Testing Framework
 
-A compact RAG/LLM Quality Engineering and AI-Assisted Testing project that combines two capabilities:
+A compact RAG/LLM Quality Engineering project for testing a bilingual customer-support RAG assistant. It combines two practical testing capabilities:
 
 ```text
-                RAG / LLM QUALITY ENGINEERING
-                           |
-          +----------------+----------------+
-          |                                 |
-     TESTING AI                       AI FOR TESTING
-          |                                 |
-   RAG Evaluation                  Requirement Analysis
-   Grounding                       Scenario Generation
-   Hallucination                   Test Data Generation
-   Citation                        pytest Execution
-   Refusal                         Failure Analysis
-   Security                        Quality Summary
-          |                                 |
-          +----------------+----------------+
-                           |
-                    Regression Gates
-                           |
-                           CI
+Testing AI
+  -> RAG evaluation
+  -> grounding and citation checks
+  -> hallucination-risk checks
+  -> refusal and security testing
+
+AI for Testing
+  -> requirement parsing
+  -> scenario generation
+  -> generated test data
+  -> pytest execution
+  -> failure analysis
+  -> quality summary
 ```
 
-The project evaluates an English/Chinese customer-support RAG assistant for retrieval quality, grounding, citation accuracy, refusal behavior, hallucination risk, and security robustness. It also adds an AI-assisted testing workflow that turns requirement text into structured scenarios, evaluation cases, pytest templates, failure analysis, and quality summaries.
-
-## What This Project Shows
-
-| Capability | Implementation |
-|---|---|
-| Bilingual RAG evaluation | English and Chinese policy documents, questions, expected answers, and expected sources |
-| Retrieval testing | Lexical, semantic, and hybrid retrieval modes |
-| Grounding evaluation | Faithfulness, context recall, context precision, answer relevancy, and citation accuracy |
-| Safety evaluation | Unanswerable handling, hallucination-risk checks, prompt injection, jailbreak, leakage, and unsafe-request refusal |
-| Challenge evaluation | Robustness cases for paraphrases, boundary constraints, unsupported options, and bilingual mixed cases |
-| AI-assisted testing | Requirement parsing, scenario generation, generated-case execution, failure triage, and quality summaries |
-| Engineering workflow | FastAPI, Streamlit, pytest regression tests, evaluation logs, reports, and GitHub Actions CI |
-
-## Current Scope
-
-| Scope | Status |
-|---|---|
-| Deterministic mode | Reproducible offline regression and CI validation |
-| AI-assisted testing mode | Requirement-driven test generation with schema validation and deterministic default execution |
-| LLM integration | Optional OpenAI-compatible JSON client for LLM-generated test scenarios; default repo does not require an API key |
-| Evaluation scope | Application-level RAG/LLM quality engineering, not foundation-model training or public model benchmarking |
+The project is designed as application-level AI quality infrastructure, not as a foundation-model benchmark. The default workflow is deterministic and CI-friendly, while optional LLM-backed test generation is available through an OpenAI-compatible JSON client.
 
 Suggested GitHub About description:
 
@@ -52,69 +26,170 @@ Suggested GitHub About description:
 Bilingual RAG/LLM quality engineering framework with AI-assisted test generation, security checks, challenge evaluation, pytest regression, FastAPI, Streamlit, and CI quality gates.
 ```
 
+## Key Features
+
+| Area | What is included |
+|---|---|
+| Bilingual RAG evaluation | English and Chinese documents, questions, expected answers, and expected sources |
+| Retrieval modes | `lexical`, `semantic`, and `hybrid` retrieval |
+| Evaluation metrics | Faithfulness, context recall, context precision, answer relevancy, citation accuracy, unanswerable safety |
+| Security evaluation | Prompt injection, jailbreak, system prompt leakage, sensitive data disclosure, retrieval poisoning, unsafe instruction refusal |
+| Challenge suite | 26 robustness cases covering paraphrases, unsupported constraints, payment/warranty edge cases, and bilingual questions |
+| AI-assisted testing | Requirement parsing, scenario generation, generated cases, generated-asset pytest execution, failure analysis, quality summary |
+| Engineering workflow | FastAPI, Streamlit, pytest, CSV/Markdown reports, JSONL logs, GitHub Actions CI |
+
 ## Architecture
 
 ```text
-                 Bilingual Knowledge Base
-                         |
-                         v
-Documents -> Chunks -> Retriever -> RAG Pipeline -> Evaluation Metrics -> Reports
-                         |               |
-                         |               +-> Streamlit Demo
-                         |               +-> FastAPI API
-                         |               +-> JSONL Logs
-                         |
-                         v
-              Lexical / Semantic / Hybrid Retrieval
+Documents
+  -> Document Loader
+  -> Text Splitter
+  -> Retriever Factory
+       -> lexical baseline
+       -> semantic backend
+       -> hybrid fusion
+  -> SimpleRAGPipeline
+  -> Evaluator
+  -> Reports / Logs / Regression Gates
 
-Requirement Text -> AI-Assisted Testing -> Generated Test Assets
-                         |
-                         +-> Structured Scenarios
-                         +-> Evaluation CSV Cases
-                         +-> Permanent pytest Runner
-                         +-> Failure Analysis
-                         +-> Quality Summary
+Requirement Text
+  -> Requirement Parser
+  -> Scenario Generator
+  -> Generated Test Cases
+  -> Generated Asset pytest Runner
+  -> Failure Analysis
+  -> Quality Summary
 ```
 
-More detail:
+Detailed documentation:
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/EVALUATION_METRICS.md](docs/EVALUATION_METRICS.md)
 - [docs/SECURITY_EVALUATION.md](docs/SECURITY_EVALUATION.md)
 - [docs/AI_ASSISTED_TESTING.md](docs/AI_ASSISTED_TESTING.md)
 
-## Evaluation Results
+## Latest Execution Results
 
-Current deterministic benchmark:
+The screenshots below are from the latest local execution. Each image filename matches the command it demonstrates.
+
+| Workflow | Command | Latest result |
+|---|---|---|
+| Main RAG evaluation | `scripts/run_evaluation.py` | 73 total cases, `overall_pass_rate = 1.0000` |
+| Security evaluation | `scripts/run_security_evaluation.py` | 12 security cases, `security_pass_rate = 1.0000` |
+| Challenge evaluation | `scripts/run_challenge_evaluation.py` | 26 challenge cases, `overall_pass_rate = 1.0000` |
+| AI-assisted testing | `scripts/run_ai_testing_workflow.py` | 4 generated cases, `generated_case_pass_rate = 1.0000` |
+| Regression gates | `scripts/run_regression_checks.py` | All configured gates passed |
+
+### Main RAG Evaluation
+
+```bash
+.venv/bin/python scripts/run_evaluation.py
+```
+
+![run_evaluation](docs/screenshots/run_evaluation.png)
+
+Key metrics from `run_evaluation.py`:
 
 | Metric | Value |
 |---|---:|
-| `overall_pass_rate` | `1.0000` |
-| `security_pass_rate` | `1.0000` |
+| `total_questions` | `73` |
+| `answerable_questions` | `51` |
+| `unanswerable_questions` | `10` |
+| `security_questions` | `12` |
 | `avg_faithfulness` | `1.0000` |
 | `avg_context_recall` | `1.0000` |
 | `avg_context_precision` | `1.0000` |
+| `security_pass_rate` | `1.0000` |
+| `overall_pass_rate` | `1.0000` |
 
-The prepared benchmark currently reaches 100% on the project’s small bilingual customer-support evaluation set. This is a regression-testing result for the prepared cases, not a public leaderboard score.
+### Security Evaluation
 
-![Evaluation report](docs/screenshots/evaluation_report.png)
-
-![Security evaluation](docs/screenshots/security_evaluation.png)
-
-Generated reports:
-
-```text
-results/evaluation_report.md
-results/summary_report.csv
-results/evaluation_results.csv
-results/security_summary.csv
-results/security_evaluation_results.csv
-results/challenge_summary.csv
-results/challenge_evaluation_results.csv
-results/failed_cases.csv
+```bash
+.venv/bin/python scripts/run_security_evaluation.py
 ```
 
-`failed_cases.csv` is empty in the current run because all prepared benchmark cases passed.
+![run_security_evaluation](docs/screenshots/run_security_evaluation.png)
+
+Security categories:
+
+| Category | Cases | Pass rate |
+|---|---:|---:|
+| Prompt injection | `2` | `1.0000` |
+| Jailbreak | `2` | `1.0000` |
+| System prompt leakage | `2` | `1.0000` |
+| Sensitive information disclosure | `2` | `1.0000` |
+| Retrieval poisoning | `2` | `1.0000` |
+| Unsafe instruction refusal | `2` | `1.0000` |
+
+### Challenge Evaluation
+
+```bash
+.venv/bin/python scripts/run_challenge_evaluation.py
+```
+
+![run_challenge_evaluation](docs/screenshots/run_challenge_evaluation.png)
+
+Challenge-suite metrics:
+
+| Metric | Value |
+|---|---:|
+| `total_questions` | `26` |
+| `answerable_questions` | `16` |
+| `unanswerable_questions` | `10` |
+| `avg_context_recall` | `0.9792` |
+| `avg_answer_relevancy` | `0.9792` |
+| `avg_faithfulness` | `1.0000` |
+| `avg_unanswerable_safe` | `1.0000` |
+| `overall_pass_rate` | `1.0000` |
+| `failed_cases` | `0` |
+
+### AI-Assisted Testing Workflow
+
+```bash
+.venv/bin/python scripts/run_ai_testing_workflow.py
+```
+
+![run_ai_testing_workflow](docs/screenshots/run_ai_testing_workflow.png)
+
+The workflow parses a requirement, generates structured scenarios, converts them into evaluation cases, executes them against the RAG pipeline, and writes quality summaries.
+
+Latest generated-case result:
+
+| Metric | Value |
+|---|---:|
+| `scenarios` | `4` |
+| `generated_cases` | `4` |
+| `generated_case_failures` | `0` |
+| `generated_case_pass_rate` | `1.0000` |
+
+Generated assets:
+
+```text
+test_assets/generated_cases/ai_testing_scenarios.json
+test_assets/generated_cases/ai_generated_cases.json
+test_assets/generated_cases/ai_generated_eval_cases.csv
+test_assets/generated_cases/generated_pytest_cases.py
+test_assets/generated_cases/ai_generated_evaluation_results.csv
+test_assets/generated_cases/ai_generated_failed_cases.csv
+test_assets/generated_cases/quality_summary.json
+test_assets/generated_cases/failure_analysis.json
+```
+
+### Regression Gates
+
+```bash
+.venv/bin/python scripts/run_regression_checks.py
+```
+
+![run_regression_checks](docs/screenshots/run_regression_checks.png)
+
+The regression gate reads `results/summary_report.csv` and checks thresholds from `configs/rag_eval_config.yaml`.
+
+Current gate result:
+
+```text
+PASSED - all regression gates passed.
+```
 
 ## Retrieval Modes
 
@@ -138,7 +213,7 @@ Optional vector dependencies are separated from the default install:
 
 ```bash
 pip install -r requirements-vector.txt
-python scripts/run_evaluation.py --retrieval-mode semantic --semantic-backend faiss
+.venv/bin/python scripts/run_evaluation.py --retrieval-mode semantic --semantic-backend faiss
 ```
 
 ## How to Run
@@ -151,75 +226,38 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the main evaluation workflow:
+If your terminal has multiple Python versions, use the virtual environment Python directly:
 
 ```bash
-python scripts/run_evaluation.py
-python scripts/run_security_evaluation.py
-python scripts/run_challenge_evaluation.py
-python scripts/run_regression_checks.py
+.venv/bin/python --version
+.venv/bin/python -m pip install -r requirements.txt
 ```
 
-Run the AI-assisted testing workflow:
-
-```bash
-python scripts/run_ai_testing_workflow.py
-```
-
-If your terminal has multiple Python versions, use:
+Run the full local quality workflow:
 
 ```bash
 .venv/bin/python scripts/run_evaluation.py
 .venv/bin/python scripts/run_security_evaluation.py
+.venv/bin/python scripts/run_ai_testing_workflow.py
+.venv/bin/python -m pytest tests/test_generated_assets.py -q
 .venv/bin/python scripts/run_challenge_evaluation.py
 .venv/bin/python scripts/run_regression_checks.py
-.venv/bin/python scripts/run_ai_testing_workflow.py
 ```
 
-## AI-Assisted Testing Workflow
-
-The AI-assisted testing layer follows this controlled pattern:
-
-```text
-Requirement
-    -> Requirement Parser
-    -> Generated Test Scenarios
-    -> Generated Test Data
-    -> pytest Execution
-    -> RAG Evaluation
-    -> Failed Cases
-    -> Failure Classification
-    -> Quality Summary
-    -> Regression Gate
-```
-
-Run:
+Run all tests:
 
 ```bash
-python scripts/run_ai_testing_workflow.py
+.venv/bin/python -m pytest -q
 ```
 
-Generated assets:
+## Optional LLM-Backed Test Generation
 
-```text
-test_assets/generated_cases/ai_testing_scenarios.json
-test_assets/generated_cases/ai_generated_cases.json
-test_assets/generated_cases/ai_generated_eval_cases.csv
-test_assets/generated_cases/generated_pytest_cases.py
-test_assets/generated_cases/ai_generated_evaluation_results.csv
-test_assets/generated_cases/ai_generated_failed_cases.csv
-test_assets/generated_cases/quality_summary.json
-test_assets/generated_cases/failure_analysis.json
-```
-
-Generated assets are executed by stable pytest code in `tests/test_generated_assets.py`. The current `RuleBasedGenerator` is a domain-specific deterministic baseline for CI. `LLMTestGenerator` uses an optional OpenAI-compatible JSON client and fails clearly if `--generator llm` is requested without an API key, so LLM-backed generation is explicit rather than an invisible fallback.
-
-Optional LLM-backed generation:
+The default `RuleBasedGenerator` is a domain-specific deterministic baseline for CI. `LLMTestGenerator` uses an optional OpenAI-compatible JSON client and fails clearly if `--generator llm` is requested without an API key.
 
 ```bash
 export LLM_API_KEY="your_api_key"
 export LLM_MODEL="gpt-4o-mini"
-python scripts/run_ai_testing_workflow.py --generator llm
+.venv/bin/python scripts/run_ai_testing_workflow.py --generator llm
 ```
 
 Supported environment variables:
@@ -231,39 +269,19 @@ LLM_API_BASE
 LLM_TIMEOUT
 ```
 
-## Challenge Suite
-
-The challenge suite is separate from regression and security cases:
-
-| Suite | Purpose |
-|---|---|
-| Regression | Known expected behavior |
-| Security | Adversarial and safety behavior |
-| Challenge | Robustness and generalization checks |
-
-Run:
-
-```bash
-python scripts/run_challenge_evaluation.py
-```
-
-The current challenge suite contains 26 cases covering paraphrased questions, unsupported-but-plausible constraints, payment and warranty edge cases, and bilingual English/Chinese queries.
-
 ## API Demo
 
 Start FastAPI:
 
 ```bash
-uvicorn api:app --reload --port 8000
+.venv/bin/python -m uvicorn api:app --reload --port 8001
 ```
 
 Open:
 
 ```text
-http://127.0.0.1:8000/docs
+http://127.0.0.1:8001/docs
 ```
-
-![FastAPI Swagger demo](docs/screenshots/fastapi_swagger.png)
 
 Endpoints:
 
@@ -277,20 +295,12 @@ GET  /logs/summary
 POST /testing/generate
 ```
 
-Example RAG request:
+Example:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/ask \
+curl -X POST http://127.0.0.1:8001/ask \
   -H "Content-Type: application/json" \
   -d '{"question": "How long does standard shipping take?", "retrieval_mode": "hybrid", "semantic_backend": "local"}'
-```
-
-Example test-generation request:
-
-```bash
-curl -X POST http://127.0.0.1:8000/testing/generate \
-  -H "Content-Type: application/json" \
-  -d '{"requirement_id": "RAG-AI-001", "requirement_text": "RAG answers must cite sources, refuse unsupported questions, and include bilingual examples."}'
 ```
 
 ## Streamlit Demo
@@ -298,10 +308,8 @@ curl -X POST http://127.0.0.1:8000/testing/generate \
 Start Streamlit:
 
 ```bash
-streamlit run app.py
+.venv/bin/python -m streamlit run app.py
 ```
-
-![Streamlit demo](docs/screenshots/streamlit_demo.png)
 
 The app defaults to the lightweight local backend. If you choose FAISS in the UI, install optional vector dependencies first:
 
@@ -311,27 +319,19 @@ pip install -r requirements-vector.txt
 
 ## Test and CI
 
-Run local tests:
+GitHub Actions runs:
 
-```bash
-pytest -q
+```text
+pytest
+-> full RAG evaluation
+-> security evaluation
+-> AI-assisted testing workflow
+-> generated asset pytest cases
+-> challenge evaluation
+-> regression gates
 ```
 
-![Pytest passed](docs/screenshots/pytest_passed.png)
-
-Run regression checks:
-
-```bash
-python scripts/run_evaluation.py
-python scripts/run_security_evaluation.py
-python scripts/run_ai_testing_workflow.py
-python scripts/run_challenge_evaluation.py
-python scripts/run_regression_checks.py
-```
-
-![Regression checks](docs/screenshots/regression_checks.png)
-
-GitHub Actions installs `requirements.txt`, runs pytest, regenerates evaluation results, runs the security suite, runs the AI-assisted testing workflow, reruns the generated asset pytest cases, runs the challenge suite, and then checks regression gates. Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_config.yaml` with `yaml.safe_load()` when PyYAML is installed.
+The current deterministic benchmark reaches 100% pass rate on the prepared bilingual customer-support evaluation set. The goal is not leaderboard comparison; it is regression testing for retrieval, grounding, citation, unanswerable handling, challenge robustness, and safety behavior.
 
 ## Project Structure
 
