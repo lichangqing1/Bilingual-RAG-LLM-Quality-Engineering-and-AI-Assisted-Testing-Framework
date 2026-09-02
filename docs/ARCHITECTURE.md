@@ -97,8 +97,6 @@ The retriever factory lives in `src/retrieval.py`.
 
 FAISS and Sentence-Transformers are optional and live in `requirements-vector.txt`. This keeps the default `requirements.txt` fast and reliable for CI.
 
-Legacy modules `src/vector_store.py` and `src/tfidf_vector_store.py` are retained only for backward-compatible examples and notebooks. New code should use `src/retrieval.py` and the retrievers under `src/retrievers/`.
-
 ## Evaluation Design
 
 The framework follows an OpenCompass-style separation:
