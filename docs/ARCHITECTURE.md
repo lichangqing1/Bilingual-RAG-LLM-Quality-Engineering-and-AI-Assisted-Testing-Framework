@@ -83,7 +83,7 @@ RAG Evaluation Results
 
 The important engineering choice is that generated content is validated as structured data before it becomes a reusable test asset.
 
-`RuleBasedGenerator` is the default generator for offline and CI execution. `LLMTestGenerator` is an optional adapter boundary for future requirement-driven generation.
+`RuleBasedGenerator` is the default domain-specific baseline for offline and CI execution. `LLMTestGenerator` uses the optional `OpenAICompatibleJSONClient` for LLM-backed requirement interpretation when `--generator llm` is explicitly requested.
 
 ## Retrieval Design
 
@@ -132,7 +132,7 @@ Regression thresholds are loaded from `quality_gates` in `configs/rag_eval_confi
 |---|---|---|---|
 | Regression | `rag_eval_en.csv`, `rag_eval_zh.csv`, `security_questions.csv` | `scripts/run_evaluation.py` | Known expected RAG behavior |
 | Security | `security_questions.csv` | `scripts/run_security_evaluation.py` | Adversarial and unsafe-request refusal |
-| Challenge | `challenge_questions.csv` | `scripts/run_challenge_evaluation.py` | Robustness and generalization |
+| Challenge | `challenge_questions.csv` | `scripts/run_challenge_evaluation.py` | Robustness and generalization across paraphrases, unsupported constraints, and bilingual queries |
 | Generated assets | `test_assets/generated_cases/ai_generated_cases.json` | `tests/test_generated_assets.py` | Requirement-driven generated cases |
 
 Metric details are in [EVALUATION_METRICS.md](EVALUATION_METRICS.md).

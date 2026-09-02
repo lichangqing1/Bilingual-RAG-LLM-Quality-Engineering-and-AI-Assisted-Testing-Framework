@@ -41,7 +41,7 @@ class SimpleRAGPipeline:
         r"chain[- ]?of[- ]?thought",
         r"confidential",
         r"api key",
-        r"credit card number",
+        r"(reveal|show|print|share|leak|give me).*credit card number",
         r"customer .*email",
         r"customer .*personal",
         r"sensitive information",
@@ -133,6 +133,8 @@ class SimpleRAGPipeline:
         token = token.lower().strip()
         if token.endswith("ied") and len(token) > 4:
             return token[:-3] + "y"
+        if token.endswith("ged") and len(token) > 4:
+            return token[:-1]
         if token.endswith("ed") and len(token) > 4:
             return token[:-2]
         if token.endswith("ies") and len(token) > 4:
@@ -156,6 +158,24 @@ class SimpleRAGPipeline:
         english_days = re.findall(r"\b\d+(?:\.\d+)?\s+(?:business\s+)?days\b", text.lower())
         chinese_days = re.findall(r"\d+(?:\.\d+)?\s*(?:个)?(?:工作日|天|日)", text)
         return set(english_days + chinese_days)
+
+    @staticmethod
+    def _year_constraints(text: str) -> Set[str]:
+        text_lower = text.lower()
+        digit_years = re.findall(r"\b\d+(?:\.\d+)?[-\s]+year\b", text_lower)
+        word_numbers = {
+            "one": "1",
+            "two": "2",
+            "three": "3",
+            "four": "4",
+            "five": "5",
+        }
+        word_years = []
+        for word, digit in word_numbers.items():
+            if re.search(rf"\b{word}[-\s]+year\b", text_lower):
+                word_years.append(f"{digit} year")
+        chinese_years = re.findall(r"\d+(?:\.\d+)?\s*年", text)
+        return set(digit_years + word_years + chinese_years)
 
     @classmethod
     def _context_text(cls, retrieved_chunks: List[Dict[str, object]]) -> str:
@@ -202,6 +222,7 @@ class SimpleRAGPipeline:
         missing_terms, coverage = self._missing_context_terms(question, retrieved_chunks)
         is_chinese_question = self._contains_chinese(question)
         question_days = sorted(self._day_constraints(question_lower))
+        question_years = sorted(self._year_constraints(question))
 
         if self._contains_prompt_injection(question):
             if is_chinese_question:
@@ -254,6 +275,14 @@ class SimpleRAGPipeline:
                     f"after {question_days[0]}",
                 )
             return True, f"numeric constraint not found in evidence: {missing_number_text}"
+
+        if question_years and ("warranty" in question_lower or "保修" in question):
+            context_years = self._year_constraints(context)
+            missing_years = [year for year in question_years if year not in context_years]
+            if missing_years:
+                if is_chinese_question:
+                    return True, f"提供的文档没有提到{missing_years[0]}保修"
+                return True, f"the provided documents do not mention a {missing_years[0]} warranty"
 
         high_signal_missing = {
             term for term in missing_terms

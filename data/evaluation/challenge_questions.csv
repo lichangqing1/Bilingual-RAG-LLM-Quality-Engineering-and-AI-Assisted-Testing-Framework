@@ -1,7 +1,27 @@
 question,expected_answer,expected_source,expected_keywords,question_type
 Can I return a product after 45 days?,The documents only mention returns within 30 days of delivery.,none,45 days;30 days,unanswerable
+Can I return a product after 90 days if it is unopened?,The documents only mention returns within 30 days of delivery.,none,90 days;30 days,unanswerable
 Do you ship outside the country?,The documents do not mention international shipping.,none,international shipping,unanswerable
+Do you offer overnight shipping?,The documents mention standard shipping and express shipping but do not mention overnight shipping.,none,overnight shipping,unanswerable
+Can I pay with Apple Pay?,The documents mention selected digital wallets but do not specifically mention Apple Pay.,none,Apple Pay;digital wallets,unanswerable
+Can I use cryptocurrency or Bitcoin to pay?,The documents do not mention cryptocurrency as an accepted payment method.,none,cryptocurrency;Bitcoin,unanswerable
+Does the company provide a two-year warranty?,The documents only mention a one-year limited warranty for most electronic products.,none,two-year;one-year warranty,unanswerable
+Can water-damaged electronics be repaired under warranty?,The warranty does not cover water damage.,warranty_policy.md,water damage;does not cover,normal
+Can customized products be returned?,Customized products cannot be returned.,return_policy.md,customized products;cannot be returned,normal
+What happens if my payment fails?,If payment fails the order will not be processed until a valid payment method is provided.,payment_policy.md,payment fails;valid payment method,normal
+When is my payment charged?,Payment is charged when the order is placed.,payment_policy.md,payment;order is placed,normal
+How long does express delivery take?,Express shipping usually takes 1 to 2 business days.,shipping_policy.md,express shipping;1 to 2 business days,normal
+Which orders qualify for free standard shipping?,Orders above $50 qualify for free standard shipping.,shipping_policy.md,above $50;free standard shipping,normal
+How can customers track an order?,Customers can track their order using the tracking link sent by email after the order is shipped.,shipping_policy.md,tracking link;email,normal
 How many business days can account deletion take?,Account deletion may take up to 14 business days to complete.,account_support.md,account deletion;14 business days,normal
 Can support tell me my password if I forgot it?,Customer support cannot see or share a customer's password.,account_support.md,cannot see;share;password,normal
+Do repaired warranty products restart the warranty period?,Products repaired or replaced under warranty do not restart the original warranty period.,warranty_policy.md,do not restart;original warranty period,normal
+Does the company store full credit card numbers?,The company does not store full card numbers on its servers.,payment_policy.md,does not store;full card numbers,normal
 我的账户删除最多需要多久?,账户删除最多可能需要14个工作日完成。,account_support_zh.md,账户删除;14个工作日,normal
 我可以45天后退货吗?,文档只提到大多数商品可在送达后30天内退货。,none,45天;30天,unanswerable
+公司支持国际配送吗?,提供的文档没有提到国际配送。,none,国际配送,unanswerable
+我可以用加密货币付款吗?,提供的文档没有提到加密货币作为可接受的付款方式。,none,加密货币,unanswerable
+加急配送通常需要多久?,加急配送通常需要1到2个工作日。,shipping_policy_zh.md,加急配送;1到2个工作日,normal
+定制商品可以退货吗?,定制商品不能退货。,return_policy_zh.md,定制商品;不能退货,normal
+公司会保存完整银行卡号吗?,公司不会在服务器上保存完整的银行卡号。,payment_policy_zh.md,不会;完整的银行卡号,normal
+保修是否覆盖进水损坏?,保修不覆盖进水损坏。,warranty_policy_zh.md,保修;进水损坏;不覆盖,normal

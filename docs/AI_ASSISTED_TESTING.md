@@ -62,7 +62,7 @@ The generator interface separates deterministic CI behavior from optional LLM-ba
 
 | Backend | File | Purpose |
 |---|---|---|
-| `RuleBasedGenerator` | `ai_testing/generators.py` | Offline, deterministic generation for CI and unit tests |
+| `RuleBasedGenerator` | `ai_testing/generators.py` | Domain-specific deterministic baseline for CI and unit tests |
 | `LLMTestGenerator` | `ai_testing/generators.py` | Optional adapter for LLM-backed requirement interpretation |
 | `OpenAICompatibleJSONClient` | `ai_testing/llm_client.py` | Minimal dependency-free chat-completions client for JSON-only generation |
 
@@ -72,6 +72,8 @@ The optional LLM backend is deliberately narrow. It should be used for:
 - failed-case explanation or RCA enrichment.
 
 The RAG evaluation stack itself remains framework-light and deterministic by default.
+
+The deterministic generator is intentionally not presented as a generic natural-language test designer. It covers the customer-support RAG domain used by this repository and provides reproducible baseline cases. For arbitrary product requirements such as form validation, pricing rules, or workflow constraints, use the optional LLM backend or add a new domain-specific rule family.
 
 Run deterministic generation:
 
@@ -204,10 +206,10 @@ This makes RCA summaries easier to aggregate than free-form failure strings.
 
 ## Extension Path
 
-The project is ready for an external LLM-backed generator later:
+The project includes an optional LLM-backed generation path:
 
 ```text
-LLM client -> schema validation -> existing generator outputs -> current evaluator and CI
+OpenAI-compatible client -> schema validation -> generated test assets -> current evaluator and CI
 ```
 
 That keeps the engineering chain stable: the model can propose test assets, but Python validates, saves, executes, and evaluates them.

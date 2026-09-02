@@ -15,9 +15,11 @@ def test_challenge_dataset_has_expected_schema_and_case_mix():
         "expected_keywords",
         "question_type",
     ]
-    assert len(df) >= 5
+    assert len(df) >= 20
     assert {"normal", "unanswerable"}.issubset(set(df["question_type"]))
     assert any("45" in question for question in df["question"])
+    assert any("国际配送" in question for question in df["question"])
+    assert any("warranty" in question.lower() for question in df["question"])
 
 
 def test_challenge_evaluation_writes_outputs(tmp_path):

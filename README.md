@@ -206,7 +206,7 @@ test_assets/generated_cases/quality_summary.json
 test_assets/generated_cases/failure_analysis.json
 ```
 
-Generated assets are executed by stable pytest code in `tests/test_generated_assets.py`. The current `RuleBasedGenerator` is deterministic and offline-friendly for CI. `LLMTestGenerator` uses an optional OpenAI-compatible JSON client and fails clearly if `--generator llm` is requested without an API key, so LLM-backed generation is explicit rather than an invisible fallback.
+Generated assets are executed by stable pytest code in `tests/test_generated_assets.py`. The current `RuleBasedGenerator` is a domain-specific deterministic baseline for CI. `LLMTestGenerator` uses an optional OpenAI-compatible JSON client and fails clearly if `--generator llm` is requested without an API key, so LLM-backed generation is explicit rather than an invisible fallback.
 
 Optional LLM-backed generation:
 
@@ -240,6 +240,8 @@ Run:
 ```bash
 python scripts/run_challenge_evaluation.py
 ```
+
+The current challenge suite contains 26 cases covering paraphrased questions, unsupported-but-plausible constraints, payment and warranty edge cases, and bilingual English/Chinese queries.
 
 ## API Demo
 
