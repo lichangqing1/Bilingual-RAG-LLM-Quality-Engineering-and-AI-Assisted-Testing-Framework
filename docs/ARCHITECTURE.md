@@ -78,12 +78,15 @@ GeneratedTestCase objects
 RAG Evaluation Results
         |
         +-> failure_analyzer.py
+        +-> rca_analyzer.py
         +-> quality_summary.py
 ```
 
 The important engineering choice is that generated content is validated as structured data before it becomes a reusable test asset.
 
 `RuleBasedGenerator` is the default domain-specific baseline for offline and CI execution. `LLMTestGenerator` uses the optional `OpenAICompatibleJSONClient` for LLM-backed requirement interpretation when `--generator llm` is explicitly requested.
+
+LLM-assisted RCA is a separate optional enrichment layer. Deterministic metrics and quality gates still decide CI pass/fail; the LLM only receives failed-case evidence and returns Pydantic-validated diagnostic guidance.
 
 ## Retrieval Design
 
@@ -110,6 +113,7 @@ The framework follows an OpenCompass-style separation:
 | Reporter | `src/report_generator.py` |
 | Regression gate | `scripts/run_regression_checks.py` |
 | Challenge suite | `scripts/run_challenge_evaluation.py` |
+| Optional RCA | `ai_testing/rca_analyzer.py` |
 
 The evaluator computes deterministic proxies for:
 

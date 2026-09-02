@@ -39,6 +39,7 @@ ai_testing:
   test_data_generator: evaluation_csv
   pytest_generation: template_based
   failure_analysis: rule_based_rca
+  llm_rca: optional_evidence_grounded_enrichment
   quality_summary: metric_grounded_narrative
   sample_requirement: test_assets/requirements/sample_rag_requirement.md
   generated_assets_dir: test_assets/generated_cases

@@ -42,7 +42,8 @@ Template-generated pytest case
         v
 RAG evaluation results
         |
-        +-> Failure classification and RCA suggestions
+        +-> Deterministic failure classification and RCA suggestions
+        +-> Optional LLM RCA enrichment
         +-> Metric-grounded quality summary
 ```
 
@@ -103,7 +104,8 @@ If `--generator llm` is used without `LLM_API_KEY` or `OPENAI_API_KEY`, the scri
 | `ai_testing/executor.py` | Executes generated cases against the real RAG pipeline |
 | `ai_testing/generators.py` | Provides deterministic and optional LLM generator backends |
 | `ai_testing/llm_client.py` | Minimal optional LLM boundary for JSON-only generation |
-| `ai_testing/failure_analyzer.py` | Classifies failed cases by likely pipeline stage and suggests RCA checks |
+| `ai_testing/failure_analyzer.py` | Deterministic failure taxonomy and first-level triage |
+| `ai_testing/rca_analyzer.py` | Optional LLM-assisted evidence-grounded root-cause analysis |
 | `ai_testing/quality_summary.py` | Converts deterministic metrics into a human-readable quality summary |
 
 Prompt templates live in:
@@ -134,6 +136,7 @@ test_assets/generated_cases/ai_generated_evaluation_results.csv
 test_assets/generated_cases/ai_generated_failed_cases.csv
 test_assets/generated_cases/quality_summary.json
 test_assets/generated_cases/failure_analysis.json
+test_assets/generated_cases/llm_rca_analysis.json
 ```
 
 The sample input requirement is:
@@ -204,12 +207,37 @@ SYSTEM_FAILURE
 
 This makes RCA summaries easier to aggregate than free-form failure strings.
 
-## Extension Path
+## Optional LLM RCA
 
-The project includes an optional LLM-backed generation path:
+LLM-based RCA is available as an optional enrichment layer after deterministic triage. It receives the failed row, evaluator metrics, retrieved sources, expected behavior, actual answer, and deterministic failure category. The prompt requires the model to use only supplied evidence, and the response must validate against `LLMRootCauseAnalysis`.
+
+Default deterministic workflow:
+
+```bash
+python scripts/run_ai_testing_workflow.py
+```
+
+Optional LLM RCA workflow:
+
+```bash
+export LLM_API_KEY="your_api_key"
+python scripts/run_ai_testing_workflow.py --rca llm
+```
+
+LLM RCA writes:
 
 ```text
-OpenAI-compatible client -> schema validation -> generated test assets -> current evaluator and CI
+test_assets/generated_cases/llm_rca_analysis.json
+```
+
+The LLM explains failures; it does not decide CI pass/fail status or replace deterministic quality gates.
+
+## Extension Path
+
+The project includes optional LLM-backed generation and RCA paths:
+
+```text
+OpenAI-compatible client -> schema validation -> generated test assets / RCA diagnostics -> current evaluator and CI
 ```
 
 That keeps the engineering chain stable: the model can propose test assets, but Python validates, saves, executes, and evaluates them.

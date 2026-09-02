@@ -91,6 +91,27 @@ class FailureAnalysis(BaseModel):
     recommended_checks: List[str]
 
 
+class LLMRootCauseAnalysis(BaseModel):
+    """Optional LLM-assisted RCA output for a failed RAG case."""
+
+    case_id: str
+    failure_category: FailureCategory
+    suspected_component: Literal[
+        "retrieval",
+        "generation",
+        "grounding",
+        "citation",
+        "safety_guard",
+        "evaluation",
+        "test_data",
+        "unknown",
+    ]
+    root_cause: str = Field(..., min_length=1)
+    evidence: List[str] = Field(default_factory=list)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    recommended_actions: List[str] = Field(default_factory=list)
+
+
 class QualitySummary(BaseModel):
     """Structured release-quality summary generated from evaluation outputs."""
 
@@ -107,3 +128,10 @@ def model_to_dict(model: BaseModel) -> Dict[str, object]:
     if hasattr(model, "model_dump"):
         return model.model_dump()
     return model.dict()
+
+
+def model_validate(model_class, payload):
+    """Validate a payload against a pydantic model across pydantic v1/v2."""
+    if hasattr(model_class, "model_validate"):
+        return model_class.model_validate(payload)
+    return model_class.parse_obj(payload)

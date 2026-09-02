@@ -1,21 +1,50 @@
-Analyze a failed RAG evaluation case.
+Analyze the following failed RAG evaluation case.
 
-Return JSON only.
+Use only the supplied evidence. Do not invent logs, retrieved documents,
+metrics, user behavior, or system behavior that is not shown below.
 
-Required fields:
-- failure_category
-- likely_stage
-- evidence
-- possible_causes
-- recommended_checks
+Return JSON only. Do not include Markdown fences or explanatory text.
 
-Use one failure_category:
-- RETRIEVAL_MISS
-- RETRIEVAL_NOISE
-- GROUNDING_FAILURE
-- CITATION_FAILURE
-- HALLUCINATION
-- ABNORMAL_REFUSAL
-- UNSAFE_RESPONSE
-- ANSWER_RELEVANCE
-- SYSTEM_FAILURE
+Case ID:
+{case_id}
+
+Question:
+{question}
+
+Expected answer:
+{expected_answer}
+
+Expected source:
+{expected_source}
+
+Expected keywords:
+{expected_keywords}
+
+Actual answer:
+{answer}
+
+Retrieved sources:
+{retrieved_sources}
+
+Failure type:
+{failure_type}
+
+Deterministic failure category:
+{failure_category}
+
+Failure detail:
+{failure_detail}
+
+Metrics:
+{metrics}
+
+Return exactly this JSON shape:
+{{
+  "case_id": "{case_id}",
+  "failure_category": "{failure_category}",
+  "suspected_component": "retrieval | generation | grounding | citation | safety_guard | evaluation | test_data | unknown",
+  "root_cause": "short evidence-grounded explanation",
+  "evidence": ["specific evidence from the supplied case"],
+  "confidence": 0.0,
+  "recommended_actions": ["specific corrective action"]
+}}

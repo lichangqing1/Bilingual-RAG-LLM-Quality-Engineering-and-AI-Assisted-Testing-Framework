@@ -14,7 +14,8 @@ AI for Testing
   -> scenario generation
   -> generated test data
   -> pytest execution
-  -> failure analysis
+  -> deterministic failure triage
+  -> optional LLM RCA
   -> quality summary
 ```
 
@@ -23,7 +24,7 @@ The project is designed as application-level AI quality infrastructure, not as a
 Suggested GitHub About description:
 
 ```text
-Bilingual RAG/LLM quality engineering framework with AI-assisted test generation, security checks, challenge evaluation, pytest regression, FastAPI, Streamlit, and CI quality gates.
+Bilingual RAG/LLM quality engineering and AI-assisted testing framework for retrieval, grounding, safety, automated test generation, regression evaluation, and CI quality gates.
 ```
 
 ## Key Features
@@ -35,7 +36,7 @@ Bilingual RAG/LLM quality engineering framework with AI-assisted test generation
 | Evaluation metrics | Faithfulness, context recall, context precision, answer relevancy, citation accuracy, unanswerable safety |
 | Security evaluation | Prompt injection, jailbreak, system prompt leakage, sensitive data disclosure, retrieval poisoning, unsafe instruction refusal |
 | Challenge suite | 26 robustness cases covering paraphrases, unsupported constraints, payment/warranty edge cases, and bilingual questions |
-| AI-assisted testing | Requirement parsing, scenario generation, generated cases, generated-asset pytest execution, failure analysis, quality summary |
+| AI-assisted testing | Requirement parsing, scenario generation, generated cases, generated-asset pytest execution, deterministic triage, optional LLM RCA, quality summary |
 | Engineering workflow | FastAPI, Streamlit, pytest, CSV/Markdown reports, JSONL logs, GitHub Actions CI |
 
 ## Architecture
@@ -57,7 +58,8 @@ Requirement Text
   -> Scenario Generator
   -> Generated Test Cases
   -> Generated Asset pytest Runner
-  -> Failure Analysis
+  -> Deterministic Failure Triage
+  -> Optional LLM RCA
   -> Quality Summary
 ```
 
@@ -173,6 +175,42 @@ test_assets/generated_cases/ai_generated_evaluation_results.csv
 test_assets/generated_cases/ai_generated_failed_cases.csv
 test_assets/generated_cases/quality_summary.json
 test_assets/generated_cases/failure_analysis.json
+test_assets/generated_cases/llm_rca_analysis.json
+```
+
+## Optional LLM Root Cause Analysis
+
+LLM RCA is an optional diagnostic enrichment layer after deterministic failure classification. It does not decide quality gates or CI pass/fail status.
+
+```text
+Failed case
+  -> deterministic failure taxonomy
+  -> evidence package from evaluator metrics
+  -> optional LLM RCA
+  -> Pydantic validation
+  -> root cause, evidence, confidence, recommended actions
+```
+
+Run RCA enrichment only when you want LLM-assisted diagnosis:
+
+```bash
+export LLM_API_KEY="your_api_key"
+.venv/bin/python scripts/run_ai_testing_workflow.py --rca llm
+```
+
+For both LLM-generated scenarios and LLM RCA:
+
+```bash
+.venv/bin/python scripts/run_ai_testing_workflow.py --generator llm --rca llm
+```
+
+Example diagnostic flow:
+
+```text
+Question: Can an item be returned after 45 days?
+Deterministic triage: ANSWER_RELEVANCE
+LLM RCA: answer selection focused on refund timing rather than the 30-day return-window constraint
+Recommended action: inspect sentence selection for numeric temporal constraints
 ```
 
 ### Regression Gates
@@ -336,7 +374,7 @@ The current deterministic benchmark reaches 100% pass rate on the prepared bilin
 ## Project Structure
 
 ```text
-Bilingual-RAG-LLM-Quality-Engineering-and-AI-Assisted-Testing-Framework/
+rag-llm-quality-engineering/
 ├── .github/workflows/ci.yml
 ├── ai_testing/
 ├── configs/rag_eval_config.yaml

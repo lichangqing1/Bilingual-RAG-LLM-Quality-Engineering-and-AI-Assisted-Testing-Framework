@@ -19,6 +19,7 @@ from ai_testing.failure_analyzer import analyze_failed_cases
 from ai_testing.generators import LLMTestGenerator, RuleBasedGenerator
 from ai_testing.llm_client import OpenAICompatibleJSONClient
 from ai_testing.quality_summary import build_quality_summary
+from ai_testing.rca_analyzer import analyze_failed_cases_with_llm
 from ai_testing.requirement_parser import parse_requirement
 from ai_testing.schemas import model_to_dict
 from ai_testing.test_data_generator import generate_test_cases
@@ -52,6 +53,7 @@ def main() -> None:
     parser.add_argument("--requirement-file", default=str(DEFAULT_REQUIREMENT))
     parser.add_argument("--requirement-id", default="RAG-AI-001")
     parser.add_argument("--generator", choices=["rule_based", "llm"], default="rule_based")
+    parser.add_argument("--rca", choices=["deterministic", "llm"], default="deterministic")
     parser.add_argument("--retrieval-mode", choices=["lexical", "keyword", "semantic", "hybrid"], default="hybrid")
     parser.add_argument("--semantic-backend", choices=["local", "faiss"], default="local")
     parser.add_argument("--top-k", type=int, default=3)
@@ -90,6 +92,17 @@ def main() -> None:
         [model_to_dict(item) for item in failure_analysis],
         GENERATED_DIR / "failure_analysis.json",
     )
+    llm_rca = []
+    if args.rca == "llm" and not failed_cases.empty:
+        llm_rca = analyze_failed_cases_with_llm(
+            failed_cases,
+            failure_analysis,
+            OpenAICompatibleJSONClient.from_env(),
+        )
+    llm_rca_path = write_json(
+        [model_to_dict(item) for item in llm_rca],
+        GENERATED_DIR / "llm_rca_analysis.json",
+    )
 
     print_header("AI-Assisted Testing Workflow Completed")
     print_subheader("Requirement")
@@ -98,6 +111,7 @@ def main() -> None:
     print(f"- title: {requirement.title}")
     print(f"- tags: {', '.join(requirement.tags)}")
     print(f"- generator: {args.generator}")
+    print(f"- rca: {args.rca}")
 
     print_subheader("Generated Test Assets")
     print(f"- scenarios: {scenario_path}")
@@ -108,12 +122,14 @@ def main() -> None:
     print(f"- generated_failed_cases: {failed_cases_path}")
     print(f"- quality_summary: {quality_summary_path}")
     print(f"- failure_analysis: {failure_analysis_path}")
+    print(f"- llm_rca_analysis: {llm_rca_path}")
 
     print_subheader("Counts")
     print(f"- scenarios: {len(scenarios)}")
     print(f"- generated_cases: {len(cases)}")
     print(f"- generated_case_failures: {len(failed_cases)}")
     print(f"- generated_case_pass_rate: {quality_summary.pass_rate:.4f}")
+    print(f"- llm_rca_items: {len(llm_rca)}")
 
 
 if __name__ == "__main__":

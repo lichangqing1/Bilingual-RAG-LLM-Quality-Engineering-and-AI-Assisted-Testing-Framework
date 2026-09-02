@@ -17,6 +17,7 @@ def test_formal_framework_files_exist():
         "scripts/run_ai_testing_workflow.py",
         "scripts/run_challenge_evaluation.py",
         "scripts/run_security_evaluation.py",
+        "ai_testing/rca_analyzer.py",
         "test_assets/requirements/sample_rag_requirement.md",
         "data/evaluation/challenge_questions.csv",
         "data/evaluation/rag_eval_en.csv",
@@ -61,6 +62,7 @@ def test_config_declares_core_tasks_and_metrics():
         "ai_testing",
         "scenario_generator",
         "failure_analysis",
+        "llm_rca",
         "quality_gates",
     ]:
         assert expected in config_text

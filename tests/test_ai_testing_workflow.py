@@ -1,14 +1,17 @@
 import json
 
 import pandas as pd
+import pytest
 
 from ai_testing.case_generator import build_pytest_code, save_cases_csv, save_scenarios
 from ai_testing.failure_analyzer import analyze_failed_cases
 from ai_testing.generators import LLMTestGenerator, RuleBasedGenerator
 from ai_testing.llm_client import OpenAICompatibleJSONClient, build_requirement_generation_prompt
 from ai_testing.quality_summary import build_quality_summary
+from ai_testing.rca_analyzer import analyze_failed_cases_with_llm, analyze_failure_with_llm, build_metric_summary
 from ai_testing.requirement_parser import parse_requirement
 from ai_testing.scenario_generator import generate_test_scenarios
+from ai_testing.schemas import FailureAnalysis
 from ai_testing.test_data_generator import generate_test_cases
 
 
@@ -100,6 +103,14 @@ def test_openai_compatible_client_reads_environment(monkeypatch):
     assert client.timeout == 7
 
 
+def test_openai_compatible_client_requires_api_key(monkeypatch):
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="LLM generator requested"):
+        OpenAICompatibleJSONClient.from_env()
+
+
 def test_generated_pytest_code_uses_template_not_freeform_python():
     requirement = parse_requirement("RAG should cite sources and refuse unsupported questions.")
     cases = generate_test_cases(generate_test_scenarios(requirement))
@@ -143,3 +154,103 @@ def test_failure_analysis_and_quality_summary_are_structured():
     assert summary.failed_cases == 1
     assert summary.pass_rate == 0.5
     assert "Citation failure" in next(iter(summary.failure_category_counts))
+
+
+def test_llm_rca_valid_output_is_schema_validated():
+    failed_row = pd.Series(
+        {
+            "case_id": "CASE-001",
+            "question": "Can I return something after 45 days?",
+            "expected_answer": "Documents only mention 30 days.",
+            "expected_source": "return_policy.md",
+            "expected_keywords": "45 days;30 days",
+            "answer": "Refunds are processed within 5 to 10 business days.",
+            "retrieved_sources": "return_policy.md;payment_policy.md",
+            "failure_type": "Answer failure: expected keywords missing",
+            "failure_detail": "answer missed expected keywords",
+            "answer_relevancy": 0.0,
+            "context_recall": 1.0,
+            "overall_pass": 0,
+        }
+    )
+    deterministic = FailureAnalysis(
+        case_id="CASE-001",
+        question="Can I return something after 45 days?",
+        failure_category="ANSWER_RELEVANCE",
+        likely_stage="Evaluation",
+        evidence="answer missed expected keywords",
+        possible_causes=["answer sentence selection mismatch"],
+        recommended_checks=["inspect answer sentence selection"],
+    )
+
+    class FakeRCAClient:
+        def complete_json(self, prompt):
+            assert "Use only the supplied evidence" in prompt
+            assert "answer_relevancy" in prompt
+            return {
+                "case_id": "CASE-001",
+                "failure_category": "ANSWER_RELEVANCE",
+                "suspected_component": "generation",
+                "root_cause": "The answer selected refund timing instead of return eligibility.",
+                "evidence": [
+                    "expected_keywords=45 days;30 days",
+                    "answer=Refunds are processed within 5 to 10 business days.",
+                ],
+                "confidence": 0.92,
+                "recommended_actions": ["Review sentence selection for return-window constraints."],
+            }
+
+    analysis = analyze_failure_with_llm(failed_row, deterministic, FakeRCAClient())
+
+    assert analysis.case_id == "CASE-001"
+    assert analysis.failure_category == "ANSWER_RELEVANCE"
+    assert analysis.suspected_component == "generation"
+    assert analysis.confidence == 0.92
+
+
+def test_llm_rca_rejects_invalid_schema_outputs():
+    failed_row = pd.Series({"case_id": "CASE-002", "failure_type": "Retrieval failure"})
+    deterministic = FailureAnalysis(
+        case_id="CASE-002",
+        question="Question",
+        failure_category="RETRIEVAL_MISS",
+        likely_stage="Retrieval",
+        evidence="expected source not retrieved",
+        possible_causes=["retriever ranking issue"],
+        recommended_checks=["inspect retrieved_sources"],
+    )
+
+    class InvalidRCAClient:
+        def complete_json(self, prompt):
+            return {
+                "case_id": "CASE-002",
+                "failure_category": "NOT_A_CATEGORY",
+                "suspected_component": "retrieval",
+                "root_cause": "Invalid category should fail.",
+                "evidence": ["bad category"],
+                "confidence": 1.2,
+                "recommended_actions": ["Fix schema."],
+            }
+
+    with pytest.raises(Exception):
+        analyze_failure_with_llm(failed_row, deterministic, InvalidRCAClient())
+
+
+def test_llm_rca_empty_failed_cases_does_not_call_client():
+    class UnexpectedRCAClient:
+        def complete_json(self, prompt):
+            raise AssertionError("LLM client should not be called when there are no failed cases.")
+
+    analyses = analyze_failed_cases_with_llm(pd.DataFrame(), [], UnexpectedRCAClient())
+
+    assert analyses == []
+
+
+def test_metric_summary_uses_available_failure_metrics():
+    row = pd.Series({"faithfulness": 0.25, "citation_accuracy": 0.0, "unused": "ignored"})
+
+    summary = build_metric_summary(row)
+
+    assert '"faithfulness": 0.25' in summary
+    assert '"citation_accuracy": 0.0' in summary
+    assert "unused" not in summary
